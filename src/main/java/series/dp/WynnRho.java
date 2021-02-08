@@ -19,7 +19,7 @@ package series.dp;
  */
 public final class WynnRho extends SeriesAlgorithm {
 
-	private final double myMinNorm;
+	private final double MIN_NORM = 1e-30;
 
 	private int status;
 	private double xx, dx, dd, xp, alpha;
@@ -28,8 +28,6 @@ public final class WynnRho extends SeriesAlgorithm {
 
 	public WynnRho(final double tolerance, final int maxIters) {
 		super(tolerance, maxIters);
-		myMinNorm = 1e-30;
-
 		x = new double[maxIters + 1];
 		tab = new double[2][maxIters + 1];
 		tab2 = new double[2][maxIters + 1];
@@ -82,14 +80,14 @@ public final class WynnRho extends SeriesAlgorithm {
 			return xx;
 		}
 		double drho = tab[1][0] - tab[0][0];
-		if (Math.abs(drho) < myMinNorm) {
+		if (Math.abs(drho) < MIN_NORM) {
 			status = 1;
 			return xx;
 		}
 		tab[1][1] = -theta / drho;
 		for (int k = 2; k <= n; ++k) {
 			drho = tab[1][k - 1] - tab[0][k - 1];
-			if (Math.abs(drho) < myMinNorm) {
+			if (Math.abs(drho) < MIN_NORM) {
 				if ((k & 1) == 0) {
 					status = 1;
 					return xx;

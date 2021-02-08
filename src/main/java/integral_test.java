@@ -11,7 +11,7 @@ public class integral_test {
 		Function<Double, Double> func = x -> Math.sin(x);
 		double a = 0.;
 		double b = 1.;
-		double eps = 1e-6;
+		double eps = 1e-9;
 
 		Quadrature[] quads = { new BulirschStoer(eps), new ClenshawCurtis(eps, ClenshawCurtisExtrapolationMethod.HAVIE),
 				new ClenshawCurtis(eps, ClenshawCurtisExtrapolationMethod.OLIVER), new GaussKronrod(eps),

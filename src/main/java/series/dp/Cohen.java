@@ -15,8 +15,6 @@ import utils.SimpleMath;
  * 9.1 (2000): 3-12.</li>
  * </ul>
  * </p>
- * 
- * @author Michael
  */
 public final class Cohen extends SeriesAlgorithm {
 

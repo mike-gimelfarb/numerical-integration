@@ -15,7 +15,7 @@ import series.dp.Levin.RemainderSequence;
  */
 public final class Adaptive extends SeriesAlgorithm {
 
-	private final boolean myPrint;
+	private final int myPrint;
 	private final int myConvergeIters;
 	private final List<SeriesAlgorithm> myMethods;
 	private final List<Boolean> myForAlternating;
@@ -32,14 +32,14 @@ public final class Adaptive extends SeriesAlgorithm {
 	 *                                 whether or not a particular instance of
 	 *                                 convergence acceleration algorithm used by
 	 *                                 this algorithm has converged
-	 * @param printProgress            whether or not to print the progress of the
+	 * @param printProgress            how often to print the progress of the
 	 *                                 current algorithm, e.g. the estimate of a
 	 *                                 sequence's or series's limit at each
 	 *                                 iteration according to each algorithm
 	 *                                 instance
 	 */
 	public Adaptive(final double tolerance, final int maxIters, final int iterationsForConvergence,
-			final boolean printProgress) {
+			final int printProgress) {
 		super(tolerance, maxIters);
 		myPrint = printProgress;
 		myConvergeIters = iterationsForConvergence;
@@ -58,6 +58,8 @@ public final class Adaptive extends SeriesAlgorithm {
 		myMethods.add(new BrezinskiTheta(myTol, myMaxIters));
 		myMethods.add(new IteratedTheta(myTol, myMaxIters));
 		myMethods.add(new WynnRho(myTol, myMaxIters));
+		myMethods.add(new Aitken(myTol, myMaxIters));
+		myForAlternating.add(false);
 		myForAlternating.add(false);
 		myForAlternating.add(false);
 		myForAlternating.add(false);
@@ -84,7 +86,7 @@ public final class Adaptive extends SeriesAlgorithm {
 	 *                                 this algorithm has converged
 	 */
 	public Adaptive(final double tolerance, final int maxIters, final int iterationsForConvergence) {
-		this(tolerance, maxIters, iterationsForConvergence, false);
+		this(tolerance, maxIters, iterationsForConvergence, 0);
 	}
 
 	@Override
@@ -117,7 +119,7 @@ public final class Adaptive extends SeriesAlgorithm {
 
 		// print header
 		final int printPrec = 18;
-		if (myPrint) {
+		if (myPrint > 0) {
 			String line = "";
 			line += pad("Index", printPrec + 5) + "\t";
 			for (final SeriesAlgorithm method : myMethods) {
@@ -130,7 +132,7 @@ public final class Adaptive extends SeriesAlgorithm {
 		for (final Double e : seq) {
 			++myFEvals;
 			if (e == null || !Double.isFinite(e)) {
-				if (myPrint) {
+				if (myPrint > 0) {
 					System.out.println("Aborting series acceleration" + " " + "due to NaN or null" + " "
 							+ "term at iteration" + " " + myIndex);
 				}
@@ -165,7 +167,7 @@ public final class Adaptive extends SeriesAlgorithm {
 					final SeriesAlgorithm method = myMethods.get(m);
 					if (myForAlternating.get(m)) {
 						except[m] = true;
-						if (myPrint) {
+						if (myPrint > 0) {
 							System.out.println("Disabling method" + " " + method.getName() + " "
 									+ "since series is nonalternating" + " " + "at iteration" + " " + myIndex);
 						}
@@ -195,7 +197,7 @@ public final class Adaptive extends SeriesAlgorithm {
 
 					// has the current method converged?
 					if (converges[m] >= myConvergeIters) {
-						if (myPrint) {
+						if (myPrint > 0) {
 							System.out.println("Converged after" + " " + myIndex + " " + "iterations with method" + " "
 									+ method.getName());
 						}
@@ -212,7 +214,7 @@ public final class Adaptive extends SeriesAlgorithm {
 
 				// if a method produces an invalid estimate it's excluded
 				if (myIndex > myConvergeIters && !Double.isFinite(ests[m])) {
-					if (myPrint) {
+					if (myPrint > 0) {
 						System.out.println("Disabling method" + " " + method.getName() + " " + "due to instability"
 								+ " " + "at iteration" + " " + myIndex);
 					}
@@ -222,7 +224,7 @@ public final class Adaptive extends SeriesAlgorithm {
 			++myIndex;
 
 			// print progress
-			if (myPrint) {
+			if (myPrint > 0 && myIndex % myPrint == 0) {
 				String line = pad(myIndex + "", printPrec) + "\t";
 				for (int m = 0; m < mcount; ++m) {
 					if (except[m]) {
