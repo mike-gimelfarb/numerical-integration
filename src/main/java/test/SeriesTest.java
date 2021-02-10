@@ -3,6 +3,7 @@ package test;
 import java.util.function.Function;
 
 import series.dp.*;
+import series.dp.Levin.RemainderSequence;
 import utils.Constants;
 
 public final class SeriesTest {
@@ -53,19 +54,33 @@ public final class SeriesTest {
 					0.68472478856315712) };
 
 	public static final void main(String[] args) {
-		InfiniteSeries[][] ALL_SERIES = { LOGARITHMIC_SERIES };
-		String[] disp = { "Logarithmic" };
-		int i = 0; 
+		InfiniteSeries[][] ALL_SERIES = { ALTERNATING_SERIES, IRREGULAR_SERIES, LINEAR_SERIES, LOGARITHMIC_SERIES };
+		String[] disp = { "Alternating", "Irregular", "Linear", "Logarithmic" };
+		int i = 0;
 		for (InfiniteSeries[] series_of_type : ALL_SERIES) {
 			System.out.println(disp[i]);
 			for (InfiniteSeries series : series_of_type) {
-				final SeriesAlgorithm toalt = new Adaptive(1e-7, 100, 5, 0);
-				Function<Long, Double> f = toalt.alternatingSeries(series.mySeries, 1L);
-				final SeriesAlgorithm alg = new Adaptive(1e-6, 500, 20, 0);
-				final double limit = alg.limit(f, 1L, true);
+				Function<Long, Double> transformed;
+				final SeriesAlgorithm toalt;
+				if (i == 3) {
+					toalt = new Ensemble(1e-7, 100, 5, 0);
+					transformed = toalt.alternatingSeries(series.mySeries, 1L);
+				} else {
+					toalt = null;
+					transformed = series.mySeries;
+				}
+				final SeriesAlgorithm alg = new Ensemble(1e-6, 1000, 10);
+				final double limit = alg.limit(transformed, 1L, true);
 				final double actual = series.myLimit;
 				final double error = Math.abs(limit - actual);
 				System.out.println(error);
+				final int sev;
+				if (i == 3) {
+					sev = toalt.countEvaluations();
+				} else {
+					sev = alg.countEvaluations();
+				}
+				System.out.println(sev);
 			}
 			i += 1;
 		}

@@ -29,34 +29,14 @@ public final class Levin extends SeriesAlgorithm {
 	 * a series.
 	 */
 	public static enum RemainderSequence {
-
-		T {
-			@Override
-			public double remainder(int n, double a1, double a2, double beta) {
-				return a2;
-			}
-		},
-		U {
-			@Override
-			public double remainder(int n, double a1, double a2, double beta) {
-				return a1 * (beta + n);
-			}
-		},
-		V {
-			@Override
-			public double remainder(int n, double a1, double a2, double beta) {
-				return a1 * a2 / (a1 - a2);
-			}
-		};
-
-		public abstract double remainder(int n, double a1, double a2, double beta);
+		T, T_FORD, U, V
 	}
 
 	private final String prefix;
 	private final double myBeta;
 	private final RemainderSequence myRemainder;
 
-	private double myE, myTerm;
+	private double myPrevE, myPrevTerm;
 	private final double[] myTabHi, myTabLo;
 
 	/**
@@ -105,40 +85,67 @@ public final class Levin extends SeriesAlgorithm {
 		// the iteration is actually computing the term one over from the
 		// one used in the current computation
 		if (myIndex == 0) {
-			myE = e;
-			myTerm = term;
-			++myIndex;
-			return Double.NaN;
+			myPrevE = e;
+			myPrevTerm = term;
+			if (myRemainder == RemainderSequence.V || myRemainder == RemainderSequence.T_FORD) {
+				++myIndex;
+				return myPrevTerm;
+			}
 		}
 
 		// compute the remainder term
-		final int k = myIndex - 1;
-		final double rem = myRemainder.remainder(k + 1, myE, e, myBeta);
+		final int k;
+		final double rem;
+		final double currentTerm;
+		switch (myRemainder) {
+		case T:
+			k = myIndex;
+			rem = e;
+			currentTerm = term;
+			break;
+		case U:
+			k = myIndex;
+			rem = e * (myBeta + k);
+			currentTerm = term;
+			break;
+		case V:
+			k = myIndex - 1;
+			rem = myPrevE * e / (myPrevE - e);
+			currentTerm = myPrevTerm;
+			break;
+		case T_FORD:
+			k = myIndex - 1;
+			rem = e;
+			currentTerm = myPrevTerm;
+			break;
+		default:
+			return Double.NaN;
+		}
+		if (Math.abs(rem) < TINY) {
+			return Double.NaN;
+		}
 
 		// update table
-		myTabHi[k] = myTerm / rem;
+		myTabHi[k] = currentTerm / rem;
 		myTabLo[k] = 1.0 / rem;
 		if (k > 0) {
-			final int itm1 = k - 1;
-			myTabHi[itm1] = myTabHi[k] - myTabHi[itm1];
-			myTabLo[itm1] = myTabLo[k] - myTabLo[itm1];
+			myTabHi[k - 1] = myTabHi[k] - myTabHi[k - 1];
+			myTabLo[k - 1] = myTabLo[k] - myTabLo[k - 1];
 			if (k > 1) {
-				final double bn1 = myBeta + k - 1.0;
-				final double bn2 = bn1 + 1.0;
-				final double coeff = bn1 / bn2;
+				final double base = (myBeta + k - 1) / (myBeta + k);
 				for (int j = 2; j <= k; ++j) {
-					final int itmj = k - j;
-					final double cjm2 = SimpleMath.pow(coeff, j - 2);
-					final double fac = (myBeta + itmj) * cjm2 / bn2;
-					myTabHi[itmj] = myTabHi[itmj + 1] - fac * myTabHi[itmj];
-					myTabLo[itmj] = myTabLo[itmj + 1] - fac * myTabLo[itmj];
+					final int kmj = k - j;
+					final double cjm2 = SimpleMath.pow(base, j - 2);
+					final double fac = (myBeta + kmj) * cjm2 / (myBeta + k);
+					myTabHi[kmj] = myTabHi[kmj + 1] - fac * myTabHi[kmj];
+					myTabLo[kmj] = myTabLo[kmj + 1] - fac * myTabLo[kmj];
 				}
 			}
 		}
 
 		// increment counters and temporaries
-		myE = e;
-		myTerm = term;
+		myPrevE = e;
+		myPrevTerm = term;
 		++myIndex;
 
 		// correct for underflow

@@ -1,8 +1,8 @@
 package series.dp;
 
 /**
- * Implements a modified Aitken delta^2 process for estimating infinite series,
- * based on the method in [1].
+ * Implements a modified adaptive Aitken delta^2 process for estimating infinite
+ * series, based on the method in [1].
  * 
  * <p>
  * References:
@@ -13,8 +13,6 @@ package series.dp;
  * </p>
  */
 public final class Aitken extends SeriesAlgorithm {
-
-	private final double MIN_NORM = 1e-30;
 
 	private int status;
 	private double xx, dx, dd, xp, alpha;
@@ -87,7 +85,7 @@ public final class Aitken extends SeriesAlgorithm {
 		for (int k = 1; k <= kend; ++k) {
 			final double w1 = ds[0][k - 1] * ds[1][k - 1];
 			final double w2 = ds[1][k - 1] - ds[0][k - 1];
-			if (Math.abs(w2) < MIN_NORM) {
+			if (Math.abs(w2) < TINY) {
 				status = 1;
 				return xx;
 			}

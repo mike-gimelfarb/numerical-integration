@@ -11,9 +11,8 @@ package series.dp;
  * transformation of slowly convergent sequences and series." Mathematical
  * Proceedings of the Cambridge Philosophical Society. Vol. 52. No. 4. Cambridge
  * University Press, 1956.</li>
- * <li>[2] Weniger, Ernst Joachim. "Nonlinear sequence transformations for the
- * acceleration of convergence and the summation of divergent series." arXiv
- * preprint math/0306302 (2003).</li>
+ * <li>[2] Osada, Naoki. Acceleration methods for slowly convergent sequences
+ * and their applications. Diss. PhD thesis, Nagoya University, 1993.</li>
  * </ul>
  * </p>
  */

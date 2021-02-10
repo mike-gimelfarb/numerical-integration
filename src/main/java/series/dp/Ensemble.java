@@ -6,14 +6,16 @@ import java.util.List;
 import series.dp.Levin.RemainderSequence;
 
 /**
- * An adaptive algorithm for evaluating the limits of sequences and series of
+ * An ensemble algorithm for evaluating the limits of sequences and series of
  * real values. This algorithms works by initializing a number of convergence
  * acceleration algorithms with different properties, and running them in
  * parallel. The estimates of the sequence's or corresponding series limit are
  * extracted from the instance that has converged first to a stable limit to the
  * desired tolerance.
  */
-public final class Adaptive extends SeriesAlgorithm {
+public final class Ensemble extends SeriesAlgorithm {
+
+	private static final int PRINT_DIGITS = 18;
 
 	private final int myPrint;
 	private final int myConvergeIters;
@@ -21,7 +23,7 @@ public final class Adaptive extends SeriesAlgorithm {
 	private final List<Boolean> myForAlternating;
 
 	/**
-	 * Creates a new instance of an adaptive convergence acceleration algorithm.
+	 * Creates a new instance of an ensemble convergence acceleration algorithm.
 	 * 
 	 * @param tolerance                the smallest acceptable change in series
 	 *                                 evaluation in consecutive iterations that
@@ -38,7 +40,7 @@ public final class Adaptive extends SeriesAlgorithm {
 	 *                                 iteration according to each algorithm
 	 *                                 instance
 	 */
-	public Adaptive(final double tolerance, final int maxIters, final int iterationsForConvergence,
+	public Ensemble(final double tolerance, final int maxIters, final int iterationsForConvergence,
 			final int printProgress) {
 		super(tolerance, maxIters);
 		myPrint = printProgress;
@@ -59,6 +61,8 @@ public final class Adaptive extends SeriesAlgorithm {
 		myMethods.add(new IteratedTheta(myTol, myMaxIters));
 		myMethods.add(new WynnRho(myTol, myMaxIters));
 		myMethods.add(new Aitken(myTol, myMaxIters));
+		myMethods.add(new Shanks(myTol, myMaxIters));
+		myForAlternating.add(false);
 		myForAlternating.add(false);
 		myForAlternating.add(false);
 		myForAlternating.add(false);
@@ -73,7 +77,7 @@ public final class Adaptive extends SeriesAlgorithm {
 	}
 
 	/**
-	 * Creates a new instance of an adaptive convergence acceleration algorithm.
+	 * Creates a new instance of an ensemble convergence acceleration algorithm.
 	 * 
 	 * @param tolerance                the smallest acceptable change in series
 	 *                                 evaluation in consecutive iterations that
@@ -85,7 +89,7 @@ public final class Adaptive extends SeriesAlgorithm {
 	 *                                 convergence acceleration algorithm used by
 	 *                                 this algorithm has converged
 	 */
-	public Adaptive(final double tolerance, final int maxIters, final int iterationsForConvergence) {
+	public Ensemble(final double tolerance, final int maxIters, final int iterationsForConvergence) {
 		this(tolerance, maxIters, iterationsForConvergence, 0);
 	}
 
@@ -118,12 +122,11 @@ public final class Adaptive extends SeriesAlgorithm {
 		boolean alternates = true;
 
 		// print header
-		final int printPrec = 18;
 		if (myPrint > 0) {
 			String line = "";
-			line += pad("Index", printPrec + 5) + "\t";
+			line += pad("Index", PRINT_DIGITS + 5) + "\t";
 			for (final SeriesAlgorithm method : myMethods) {
-				line += pad(method.getName(), printPrec + 5) + "\t";
+				line += pad(method.getName(), PRINT_DIGITS + 5) + "\t";
 			}
 			System.out.println(line);
 		}
@@ -131,6 +134,8 @@ public final class Adaptive extends SeriesAlgorithm {
 		// main loop
 		for (final Double e : seq) {
 			++myFEvals;
+
+			// test for invalid value of series
 			if (e == null || !Double.isFinite(e)) {
 				if (myPrint > 0) {
 					System.out.println("Aborting series acceleration" + " " + "due to NaN or null" + " "
@@ -225,12 +230,12 @@ public final class Adaptive extends SeriesAlgorithm {
 
 			// print progress
 			if (myPrint > 0 && myIndex % myPrint == 0) {
-				String line = pad(myIndex + "", printPrec) + "\t";
+				String line = pad(myIndex + "", PRINT_DIGITS) + "\t";
 				for (int m = 0; m < mcount; ++m) {
 					if (except[m]) {
-						line += pad("-", printPrec) + "\t";
+						line += pad("-", PRINT_DIGITS) + "\t";
 					} else {
-						line += pad(Double.toString(ests[m]), printPrec) + "\t";
+						line += pad(Double.toString(ests[m]), PRINT_DIGITS) + "\t";
 					}
 				}
 				System.out.println(line);

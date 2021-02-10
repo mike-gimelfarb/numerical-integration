@@ -97,7 +97,7 @@ public abstract class SeriesAlgorithm {
 			// estimate the next term and error
 			final double oldest = est;
 			est = next(e, term);
-			if (myIndex >= 3) {
+			if (myIndex >= 4) {
 				if (est != est) {
 					break;
 				}
