@@ -21,50 +21,50 @@ import algebras.OrderedField;
  */
 public final class WynnEpsilon<T> extends SeriesAlgorithm<T> {
 
-	private final T[] myTab;
+    private final T[] myTab;
 
-	public WynnEpsilon(final OrderedField<T> field, final double tolerance, final double underflow,
-			final int maxIters) {
-		super(field, tolerance, underflow, maxIters);
-		myTab = myField.emptyList(maxIters + 1);
+    public WynnEpsilon(final OrderedField<T> field, final double tolerance, final double underflow,
+	    final int maxIters) {
+	super(field, tolerance, underflow, maxIters);
+	myTab = myField.emptyList(maxIters + 1);
+    }
+
+    @Override
+    public final T next(final T e, final T term) {
+
+	// initialization
+	myTab[myIndex] = term;
+	if (myIndex == 0) {
+	    ++myIndex;
+	    return term;
 	}
 
-	@Override
-	public final T next(final T e, final T term) {
+	// main loop of Wynn Epsilon algorithm
+	T aux = myField.zero();
+	for (int j = myIndex; j >= 1; --j) {
 
-		// initialization
-		myTab[myIndex] = term;
-		if (myIndex == 0) {
-			++myIndex;
-			return term;
-		}
+	    // compute the next epsilon
+	    final T temp = aux;
+	    aux = myTab[j - 1];
+	    T diff = myField.subtract(myTab[j], aux);
 
-		// main loop of Wynn Epsilon algorithm
-		T aux = myField.zero();
-		for (int j = myIndex; j >= 1; --j) {
-
-			// compute the next epsilon
-			final T temp = aux;
-			aux = myTab[j - 1];
-			T diff = myField.subtract(myTab[j], aux);
-
-			// correct denominators for underflow
-			if (myField.magnitude(diff) <= myTiny) {
-				diff = myField.huge();
-			} else {
-				diff = myField.add(temp, myField.invert(diff));
-			}
-			myTab[j - 1] = diff;
-		}
-
-		// prepare result
-		final T result = myTab[myIndex & 1];
-		++myIndex;
-		return result;
+	    // correct denominators for underflow
+	    if (myField.magnitude(diff) <= myTiny) {
+		diff = myField.huge();
+	    } else {
+		diff = myField.add(temp, myField.invert(diff));
+	    }
+	    myTab[j - 1] = diff;
 	}
 
-	@Override
-	public String getName() {
-		return "Wynn Epsilon";
-	}
+	// prepare result
+	final T result = myTab[myIndex & 1];
+	++myIndex;
+	return result;
+    }
+
+    @Override
+    public String getName() {
+	return "Wynn Epsilon";
+    }
 }
