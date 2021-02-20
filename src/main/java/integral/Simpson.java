@@ -1,12 +1,25 @@
 package integral;
 
+import java.util.AbstractQueue;
+import java.util.Comparator;
+import java.util.PriorityQueue;
 import java.util.Stack;
 import java.util.function.Function;
 
 /**
- * A globally adaptive numerical integrator based on Simpson's rule [1]. The
- * Lyness-Richardson criterion is used to decide when to stop subdividing an
- * interval [2].
+ * A local and global adaptive numerical integrator based on Simpson's rule [1].
+ * For all implementations, we use the Lyness-Richardson criterion to decide
+ * when to stop subdividing an interval [2]. There are two versions:
+ * <ol>
+ * <li>the local error estimation version (SQUANK) bisects the integration
+ * region recursively, until the request error is reached on each interval
+ * [3]</li>
+ * <li>the global error estimation version bisects the integration region as in
+ * the local version, but maintains instead a global estimate of the error;
+ * subintervals are stored in a priority queue and the intervals with the
+ * largest contribution to the error are chosen at each iteration for further
+ * subdivision[4]</li>
+ * </ol>
  * 
  * <p>
  * References:
@@ -16,56 +29,193 @@ import java.util.function.Function;
  * DOI:https://doi.org/10.1145/367766.368179</li>
  * <li>[2] Lyness, James N. "Notes on the adaptive Simpson quadrature routine."
  * Journal of the ACM (JACM) 16.3 (1969): 483-495.</li>
+ * <li>[3] J. N. Lyness. 1970. Algorithm 379: Squank (Simpson Quadrature used
+ * adaptivity—noise killed) [D1]. Commun. ACM 13, 4 (April 1970), 260–262.
+ * DOI:https://doi.org/10.1145/362258.362289</li>
+ * <li>[4] Michael A. Malcolm and R. Bruce Simpson. 1975. Local Versus Global
+ * Strategies for Adaptive Quadrature. ACM Trans. Math. Softw. 1, 2 (June 1975),
+ * 129–146. DOI:https://doi.org/10.1145/355637.355640</li>
  * </ul>
  * </p>
  */
 public final class Simpson extends Quadrature {
 
-    private final int myMaxEvals;
-
     /**
-     * Creates a new instance of the adaptive Simpson integrator.
-     * 
-     * @param tolerance the smallest acceptable change in integral estimates in
-     *                  consecutive iterations that indicates the algorithm has
-     *                  converged
-     * @param maxEvals  the maximum number of function evaluations
+     * Sorts intervals in descending order according to their estimated error.
      */
-    public Simpson(final double tolerance, final int maxEvals) {
-	super(tolerance);
-	myMaxEvals = maxEvals;
+    private final class IntervalErrorComparator implements Comparator<double[]> {
+
+	@Override
+	public int compare(double[] o1, double[] o2) {
+	    final int n = o1.length;
+	    return Double.compare(o2[n - 1], o1[n - 1]);
+	}
     }
 
-    public Simpson(final double tolerance) {
-	this(tolerance, 9999);
+    /**
+     * The type of error estimation and subdivision method to use for adaptive
+     * integration.
+     */
+    public static enum SimpsonAdaptationType {
+	LOCAL, GLOBAL
+    }
+
+    private final SimpsonAdaptationType myMethod;
+
+    /**
+     * Creates a new instance of a local or global adaptive Simpson integrator.
+     * 
+     * @param tolerance      the smallest acceptable change in integral estimates in
+     *                       consecutive iterations that indicates the algorithm has
+     *                       converged
+     * @param maxEvaluations the maximum number of evaluations of each function
+     *                       permitted
+     * @param method         the type of adaptation to use (e.g. local or global)
+     *                       for subdividing intervals
+     */
+    public Simpson(final double tolerance, final int maxEvaluations, final SimpsonAdaptationType method) {
+	super(tolerance, maxEvaluations);
+	myMethod = method;
+    }
+
+    public Simpson(final double tolerance, final int maxEvaluations) {
+	this(tolerance, maxEvaluations, SimpsonAdaptationType.GLOBAL);
     }
 
     @Override
     final double properIntegral(final Function<? super Double, Double> f, final double a, final double b) {
-	return adaptiveSimpson(f, a, b);
+	switch (myMethod) {
+	case GLOBAL:
+	    return globalSimpson(f, a, b);
+	case LOCAL:
+	    return localSimpson(f, a, b);
+	default:
+	    return Double.NaN;
+	}
     }
 
-    private double adaptiveSimpson(final Function<? super Double, Double> func, final double a, final double b) {
+    @Override
+    public final String getName() {
+	return myMethod.toString() + "-Simpson";
+    }
 
-	// INITIALIZE ITERATION VARIABLES
-	final Stack<double[]> stack = new Stack<>();
+    private final double globalSimpson(final Function<? super Double, Double> func, final double a, final double b) {
 
-	// ADD THE INITIAL INTERVAL
+	// estimate the error on [a, b] using Lyness'-Richardson
+	final double m0 = 0.5 * (a + b);
+	final double fa0 = func.apply(a);
+	final double fm0 = func.apply(m0);
+	final double fb0 = func.apply(b);
+	final double lm0 = 0.5 * (a + m0);
+	final double rm0 = 0.5 * (m0 + b);
+	final double flm0 = func.apply(lm0);
+	final double frm0 = func.apply(rm0);
+	final double h0 = b - a;
+	final double crude0 = (h0 / 6) * (fa0 + 4 * fm0 + fb0);
+	final double fine0 = (h0 / 12) * (fa0 + 4 * flm0 + 2 * fm0 + 4 * frm0 + fb0);
+	double est = fine0;
+	double error = Math.abs(fine0 - crude0) / 15;
+	int fev = 5;
+
+	// make the stack, and push the interval onto it
+	final AbstractQueue<double[]> queue = new PriorityQueue<>(100, new IntervalErrorComparator());
+	double[] interval = { a, lm0, m0, rm0, b, fa0, flm0, fm0, frm0, fb0, fine0, error };
+	queue.add(interval);
+
+	// unrolled version of the adaptive Simpson method
+	while (!queue.isEmpty()) {
+
+	    // retrieve the interval with the largest error
+	    interval = queue.poll();
+	    final double a1 = interval[0];
+	    final double lm1 = interval[1];
+	    final double m1 = interval[2];
+	    final double rm1 = interval[3];
+	    final double b1 = interval[4];
+	    final double fa1 = interval[5];
+	    final double flm1 = interval[6];
+	    final double fm1 = interval[7];
+	    final double frm1 = interval[8];
+	    final double fb1 = interval[9];
+	    final double area1 = interval[10];
+	    final double error1 = interval[11];
+
+	    // very small intervals are not subdivided
+	    if (Math.abs(b1 - a1) == 0.0) {
+		continue;
+	    }
+
+	    // estimate the error on [a, mid] using Lyness'-Richardson
+	    final double llm1 = 0.5 * (a1 + lm1);
+	    final double lrm1 = 0.5 * (lm1 + m1);
+	    final double fllm1 = func.apply(llm1);
+	    final double flrm1 = func.apply(lrm1);
+	    final double lh = m1 - a1;
+	    final double lcrude = (lh / 6) * (fa1 + 4 * flm1 + fm1);
+	    final double lfine = (lh / 12) * (fa1 + 4 * fllm1 + 2 * flm1 + 4 * flrm1 + fm1);
+	    final double lest = lfine;
+	    final double lerror = Math.abs(lfine - lcrude) / 15;
+
+	    // estimate the error on [mid, b] using Lyness'-Richardson
+	    final double rlm1 = 0.5 * (m1 + rm1);
+	    final double rrm1 = 0.5 * (rm1 + b1);
+	    final double frlm1 = func.apply(rlm1);
+	    final double frrm1 = func.apply(rrm1);
+	    final double rh = b1 - m1;
+	    final double rcrude = (rh / 6) * (fm1 + 4 * frm1 + fb1);
+	    final double rfine = (rh / 12) * (fm1 + 4 * frlm1 + 2 * frm1 + 4 * frrm1 + fb1);
+	    final double rest = rfine;
+	    final double rerror = Math.abs(rfine - rcrude) / 15;
+
+	    // update global estimate of the integral and error
+	    est = est - area1 + lest + rest;
+	    error = error - error1 + lerror + rerror;
+	    fev += 4;
+
+	    // add the left interval to the queue
+	    final double[] linterval = { a1, llm1, lm1, lrm1, m1, fa1, fllm1, flm1, flrm1, fm1, lest, lerror };
+	    queue.add(linterval);
+
+	    // add the right interval to the queue
+	    final double[] rinterval = { m1, rlm1, rm1, rrm1, b1, fm1, frlm1, frm1, frrm1, fb1, rest, rerror };
+	    queue.add(rinterval);
+
+	    // check for budget reached or invalid value
+	    if (fev >= myMaxEvals || !Double.isFinite(est)) {
+		myFEvals += fev;
+		return Double.NaN;
+	    }
+
+	    // check for tolerance level reached
+	    if (error < myTol && fev > 9) {
+		break;
+	    }
+	}
+
+	// reached the final requested tolerance
+	myFEvals += fev;
+	return est;
+    }
+
+    private final double localSimpson(final Function<? super Double, Double> func, final double a, final double b) {
+
+	// initialize the first interval
 	final double m0 = 0.5 * (a + b);
 	final double fa = func.apply(a);
 	final double fm = func.apply(m0);
 	final double fb = func.apply(b);
-	double[] interval = { a, m0, b, fa, fm, fb };
-	stack.push(interval);
 	int fev = 3;
-	int memsize = 1;
 	double est = 0.0;
 
-	// MAIN LOOP OF GLOBALLY ADAPTIVE SIMPSON
-	while (!stack.isEmpty()) {
-	    memsize = Math.max(memsize, stack.size());
+	// make the stack, and push the interval onto it
+	final Stack<double[]> stack = new Stack<>();
+	double[] interval = { a, m0, b, fa, fm, fb, myTol };
+	stack.push(interval);
 
-	    // RETRIEVE AND REMOVE A SUBINTERVAL FROM THE QUEUE
+	// unrolled version of the adaptive Simpson method
+	while (!stack.isEmpty()) {
+
+	    // retrieve the top interval off the stack
 	    interval = stack.pop();
 	    final double a1 = interval[0];
 	    final double m1 = interval[1];
@@ -73,40 +223,41 @@ public final class Simpson extends Quadrature {
 	    final double fa1 = interval[3];
 	    final double fm1 = interval[4];
 	    final double fb1 = interval[5];
+	    final double eps = interval[6];
 
-	    // ESTIMATE ERROR USING LYNESS' RICHARDSON METHOD
+	    // estimate the error using Lyness'-Richardson
 	    final double wid = b1 - a1;
-	    final double lm1 = 0.5 * (a1 + m1);
-	    final double rm1 = 0.5 * (m1 + b1);
-	    final double flm1 = func.apply(lm1);
-	    final double frm1 = func.apply(rm1);
-	    final double est1 = (fa1 + 4.0 * fm1 + fb1) * (wid / 6.0);
-	    final double est2 = (fa1 + 4.0 * flm1 + fm1) * (wid / 12.0) + (fm1 + 4.0 * frm1 + fb1) * (wid / 12.0);
+	    final double lmid = 0.5 * (a1 + m1);
+	    final double rmid = 0.5 * (m1 + b1);
+	    final double flmid = func.apply(lmid);
+	    final double frmid = func.apply(rmid);
 	    fev += 2;
+	    final double crude = (fa1 + 4.0 * fm1 + fb1) * (wid / 6.0);
+	    final double left = (fa1 + 4.0 * flmid + fm1) * (wid / 6.0);
+	    final double right = (fb1 + 4.0 * frmid + fm1) * (wid / 6.0);
+	    final double fine = 0.5 * (left + right);
+	    final double err = Math.abs(fine - crude);
 
-	    // IF THE ERROR IS WITHIN TOLERANCE, UPDATE ESTIMATE, ELSE DEQUEUE
-	    final double err = Math.abs(est1 - est2) / 15.0;
-	    if (err <= wid * myTol) {
-		est += est2 + (est2 - est1) / 15.0;
+	    // if the error is within the tolerance, update the global integral estimate
+	    if (fev > 5 && (err <= 15.0 * eps || wid == 0.0 || eps * 2 == eps)) {
+		est += fine + (fine - crude) / 15.0;
 		continue;
 	    }
 
-	    // CHECK FOR FAILURE OF CONVERGENCE
+	    // check for budget reached or invalid value
 	    if (fev >= myMaxEvals || !Double.isFinite(est)) {
 		myFEvals += fev;
 		return Double.NaN;
 	    }
 
-	    // ADD THE LEFT HALF-INTERVAL
-	    final double[] left = { a1, lm1, m1, fa1, flm1, fm1 };
-	    stack.push(left);
-
-	    // ADD THE RIGHT HALF-INTERVAL
-	    final double[] right = { m1, rm1, b1, fm1, frm1, fb1 };
-	    stack.push(right);
+	    // push the subdivided interval onto the stack
+	    final double[] lint = { a1, lmid, m1, fa1, flmid, fm1, eps / 2 };
+	    stack.push(lint);
+	    final double[] rint = { m1, rmid, b1, fm1, frmid, fb1, eps / 2 };
+	    stack.push(rint);
 	}
 
-	// RETURN THE FINAL ESTIMATE
+	// reached the final requested tolerance on all subdivisions
 	myFEvals += fev;
 	return est;
     }

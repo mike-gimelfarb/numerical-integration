@@ -6,7 +6,7 @@ import utils.Constants;
 
 /**
  * Implements an adaptive numerical integrator based on the 7-point
- * Gauss-Lobatto rule, as introduced in [1].
+ * Gauss-Lobatto rule, as described in [1].
  * 
  * <p>
  * References:
@@ -26,8 +26,10 @@ public final class GaussLobatto extends Quadrature {
 	    0.1888215739601824544, 0.1997734052268585268, 0.2249264653333395270, 0.2426110719014077338 };
     private static final double[] C = { 77.0, 432.0, 625.0, 672.0 };
 
-    public GaussLobatto(final double tolerance) {
-	super(tolerance);
+    private int fev;
+
+    public GaussLobatto(final double tolerance, final int maxEvaluations) {
+	super(tolerance, maxEvaluations);
     }
 
     @Override
@@ -35,9 +37,14 @@ public final class GaussLobatto extends Quadrature {
 	return dlob8e(f, a, b);
     }
 
-    private double dlob8e(final Function<? super Double, Double> f, final double a, final double b) {
+    @Override
+    public final String getName() {
+	return "Gauss-Lobatto";
+    }
 
-	// COMPUTE INTERPOLATION POINTS
+    private final double dlob8e(final Function<? super Double, Double> f, final double a, final double b) {
+
+	// compute interpolation points
 	final double mid = 0.5 * (a + b);
 	final double h = 0.5 * (b - a);
 	final double y1 = f.apply(a);
@@ -53,25 +60,51 @@ public final class GaussLobatto extends Quadrature {
 	final double f4 = f.apply(mid + h * X[1]);
 	final double f5 = f.apply(mid - h * X[2]);
 	final double f6 = f.apply(mid + h * X[2]);
+	fev = 13;
+
+	// compute a crude initial estimate of the integral
 	final double est1 = (y1 + y13 + 5.0 * (y5 + y9)) * (h / 6.0);
-	final double est2 = (C[0] * (y1 + y13) + C[1] * (y3 + y11) + C[2] * (y5 + y9) + C[3] * y7) * (h / 1470.0);
-	myFEvals += 13;
 
-	// COMPUTE ERROR ESTIMATE
-	final double s = (Y[0] * (y1 + y13) + Y[1] * (f1 + f2) + Y[2] * (y3 + y11) + Y[3] * (f3 + f4) + Y[4] * (y5 + y9)
-		+ Y[5] * (f5 + f6) + Y[6] * y7) * h;
-	final double r = Math.abs(est1 - s) != 0.0 ? Math.abs(est2 - s) / Math.abs(est1 - s) : 1.0;
-	final double rtol = r > 0.0 && r < 1.0 ? myTol / r : myTol;
-	final double s1 = s == 0.0 ? Math.abs(b - a) : s;
+	// compute a more refined estimate of the integral
+	double est2 = C[0] * (y1 + y13) + C[1] * (y3 + y11) + C[2] * (y5 + y9) + C[3] * y7;
+	est2 *= (h / 1470.0);
 
-	// CALL MAIN SUBROUTINE
-	return dlob8(f, a, b, y1, y13, s1, rtol);
+	// compute the error estimate
+	double s = Y[0] * (y1 + y13) + Y[1] * (f1 + f2);
+	s += Y[2] * (y3 + y11) + Y[3] * (f3 + f4);
+	s += Y[4] * (y5 + y9) + Y[5] * (f5 + f6) + Y[6] * y7;
+	s *= h;
+	double rtol = myTol;
+	if (est1 != s) {
+	    final double r = Math.abs(est2 - s) / Math.abs(est1 - s);
+	    if (r > 0.0 && r < 1.0) {
+		rtol /= r;
+	    }
+	}
+	double sign = Math.signum(s);
+	if (sign == 0) {
+	    sign = 1.0;
+	}
+	double s1 = sign * Math.abs(s) * rtol / Constants.EPSILON;
+	if (s == 0) {
+	    s1 = Math.abs(b - a);
+	}
+
+	// call the recursive subroutine
+	final double result = dlob8(f, a, b, y1, y13, s1, rtol);
+	myFEvals += fev;
+	return result;
     }
 
-    private double dlob8(final Function<? super Double, Double> f, final double a, final double b, final double fa,
-	    final double fb, final double s, final double rtol) {
+    private final double dlob8(final Function<? super Double, Double> f, final double a, final double b,
+	    final double fa, final double fb, final double s, final double rtol) {
 
-	// INITIALIZE
+	// check the budget of evaluations
+	if (fev >= myMaxEvals) {
+	    return Double.NaN;
+	}
+
+	// compute the interpolation points
 	final double h = 0.5 * (b - a);
 	final double mid = 0.5 * (a + b);
 	final double mll = mid - h * ALPHA;
@@ -83,16 +116,21 @@ public final class GaussLobatto extends Quadrature {
 	final double fmid = f.apply(mid);
 	final double fmr = f.apply(mr);
 	final double fmrr = f.apply(mrr);
-	final double est2 = (C[0] * (fa + fb) + C[1] * (fmll + fmrr) + C[2] * (fml + fmr) + C[3] * fmid) * (h / 1470.0);
-	final double est1 = (fa + fb + 5.0 * (fml + fmr)) * (h / 6.0);
-	myFEvals += 8;
+	fev += 8;
 
-	// CHECK CONVERGENCE
-	if (Math.abs(est1 - est2) <= myTol * s || mll <= a || b <= mrr) {
+	// compute a crude estimate of the integral
+	final double est1 = (fa + fb + 5.0 * (fml + fmr)) * (h / 6.0);
+
+	// compute a more refined estimate of the integral
+	double est2 = C[0] * (fa + fb) + C[1] * (fmll + fmrr) + C[2] * (fml + fmr) + C[3] * fmid;
+	est2 *= (h / 1470.0);
+
+	// check the convergence
+	if (s + (est2 - est1) == s || mll <= a || b <= mrr) {
 	    return est2;
 	}
 
-	// RECURSION
+	// subdivide the integration region and repeat
 	return dlob8(f, a, mll, fa, fmll, s, rtol) + dlob8(f, mll, ml, fmll, fml, s, rtol)
 		+ dlob8(f, ml, mid, fml, fmid, s, rtol) + dlob8(f, mid, mr, fmid, fmr, s, rtol)
 		+ dlob8(f, mr, mrr, fmr, fmrr, s, rtol) + dlob8(f, mrr, b, fmrr, fb, s, rtol);

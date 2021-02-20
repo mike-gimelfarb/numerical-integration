@@ -23,6 +23,16 @@ public final class SimpleMath {
 	return (x & y) + ((x ^ y) >> 1);
     }
 
+    /**
+     * Computes the floor of the base-two logarith of the specified integer.
+     */
+    public static final int log2Int(final int n) {
+	if (n <= 0) {
+	    throw new IllegalArgumentException();
+	}
+	return 31 - Integer.numberOfLeadingZeros(n);
+    }
+
     // ==========================================================================
     // FLOATING POINT MATH
     // ==========================================================================

@@ -3,31 +3,39 @@ package integral;
 import java.util.Iterator;
 import java.util.function.Function;
 
-import series.dp.SeriesAlgorithm;
-
 /**
  * An abstract class for the base of all numerical integrators for 1d functions.
  */
 public abstract class Quadrature {
 
-    protected static final int MAX_ITERS = (int) 1e7;
-
     protected final double myTol;
+    protected final int myMaxEvals;
+
     protected int myFEvals;
 
     /**
      * Creates a new instance of the current numerical integrator.
      * 
-     * @param tolerance the smallest acceptable change in integral estimates in
-     *                  consecutive iterations that indicates the algorithm has
-     *                  converged
+     * @param tolerance      the smallest acceptable change in integral estimates in
+     *                       consecutive iterations that indicates the algorithm has
+     *                       converged
+     * @param maxEvaluations the maximum number of evaluations of each function
+     *                       permitted
      */
-    public Quadrature(final double tolerance) {
+    public Quadrature(final double tolerance, final int maxEvaluations) {
 	myTol = tolerance;
+	myMaxEvals = maxEvaluations;
 	myFEvals = 0;
     }
 
     abstract double properIntegral(Function<? super Double, Double> f, double a, double b);
+
+    /**
+     * Returns a string representation of the current algorithm.
+     * 
+     * @return a string representation of the current algorithm
+     */
+    public abstract String getName();
 
     /**
      * Sets the variable that keeps track of the number of function evaluations to
@@ -76,7 +84,7 @@ public abstract class Quadrature {
 
 	// opposite bounds
 	if (a > b) {
-	    return -integrate(f, b, a);
+	    return integrate(f, b, a);
 	}
 
 	// finite integral (a, b)
@@ -85,9 +93,8 @@ public abstract class Quadrature {
 	}
 
 	// improper integral is not handled by default
-	throw new IllegalArgumentException("Quadrature subroutine" + " " + getClass().getSimpleName() + " "
-		+ "does not handle improper integrals. " + "Use Gauss Kronrod subroutine instead "
-		+ "or integrate piecewise.");
+	throw new IllegalArgumentException("The quadrature subroutine" + " " + getClass().getSimpleName() + " "
+		+ "does not handle improper integrals. Try using a transformation or integrate piecewise.");
     }
 
     /**
@@ -114,56 +121,44 @@ public abstract class Quadrature {
     }
 
     /**
-     * Computes an indefinite integral of an oscillating function (a function whose
-     * sign changes periodically) from a given starting point to infinity. This
-     * method first splits the integration region into disjoint regions. It then
-     * defines a sequence by estimating the definite integrals over each disjoint
-     * region, and accelerates the sequence of partial sums to estimate the
-     * indefinite integral.
+     * This method splits a potentially indefinite integration interval into
+     * disjoint definite intervals. It returns a sequence of integral estimates on
+     * each interval. This is very useful for evaluating highly oscillating
+     * integrals on infinite intervals, called Longman's method [1].
      * 
-     * @param f               the function to integrate
-     * @param a               the left endpoint of the integration region
-     * @param splitPoints     the points at which to split the integration region
-     *                        when defining definite integrals
-     * @param maxIntegrations the maximum number of integrations that can be
-     *                        performed to estimate the indefinite integral
-     * @return an estimate of the indefinite integral
+     * <p>
+     * References:
+     * <ul>
+     * <li>[1] Longman, I. (1956). Note on a method for computing infinite integrals
+     * of oscillatory functions. Mathematical Proceedings of the Cambridge
+     * Philosophical Society, 52(4), 764-768. doi:10.1017/S030500410003187X</li>
+     * </ul>
+     * </p>
+     * 
+     * @param f           the function to integrate
+     * @param splitPoints the points at which to split the integration region when
+     *                    defining definite integrals
+     * @return an Iterable representing the sequence of definite integrals
      */
-    public double integratePiecewise(final Function<? super Double, Double> f, final double a,
-	    final int maxIntegrations, final Iterable<Double> splitPoints, final SeriesAlgorithm accelerator) {
+    public Iterable<Double> integratePiecewise(final Function<? super Double, Double> f,
+	    final Iterable<Double> splitPoints) {
+	return () -> new Iterator<>() {
 
-	// cycle through the roots until we find the first in the integration region
-	final Iterator<Double> it = splitPoints.iterator();
-	double x0;
-	while ((x0 = it.next()) <= a)
-	    ;
-
-	// get the first root and integral estimate in [a, x(0)]
-	final double a1 = x0;
-	final double ix0 = properIntegral(f, a, a1);
-
-	// construct a sequence of integrals over the intervals between successive roots
-	final Iterable<Double> sequence = () -> new Iterator<>() {
-
-	    double left = 0.0;
-	    double right = a1;
-	    int i = 1;
+	    private final Iterator<Double> it = splitPoints.iterator();
+	    private double left = 0.0;
+	    private double right = it.hasNext() ? it.next() : Double.NaN;
 
 	    @Override
-	    public boolean hasNext() {
-		return i < maxIntegrations && it.hasNext();
+	    public final boolean hasNext() {
+		return it.hasNext();
 	    }
 
 	    @Override
-	    public Double next() {
+	    public final Double next() {
 		left = right;
 		right = it.next();
-		++i;
-		return properIntegral(f, left, right);
+		return integrate(f, left, right);
 	    }
 	};
-
-	// accelerate the sequence
-	return ix0 + accelerator.limit(sequence, true);
     }
 }

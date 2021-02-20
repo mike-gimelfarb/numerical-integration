@@ -2,6 +2,7 @@ package integral;
 
 import java.util.function.Function;
 
+import utils.Constants;
 import utils.SimpleMath;
 
 /**
@@ -38,12 +39,15 @@ public final class TanhSinh extends Quadrature {
      * @param absoluteTolerance the smallest acceptable absolute change in integral
      *                          estimates in consecutive iterations that indicates
      *                          the algorithm has converged
+     * @param maxEvaluations    the maximum number of evaluations of each function
+     *                          permitted
      * @param maxLevels         determines the number of interpolation points;
      *                          choosing large values may cause a heap exception;
      *                          defaults to 12
      */
-    public TanhSinh(final double relativeTolerance, final double absoluteTolerance, final int maxLevels) {
-	super(absoluteTolerance);
+    public TanhSinh(final double relativeTolerance, final double absoluteTolerance, final int maxEvaluations,
+	    final int maxLevels) {
+	super(absoluteTolerance, maxEvaluations);
 	myRelTol = relativeTolerance;
 	myLevels = maxLevels;
 
@@ -51,7 +55,7 @@ public final class TanhSinh extends Quadrature {
 	final int len = ((1 << myLevels) << 2) * 5;
 	myX = new double[len];
 	myW = new double[len];
-	myIters = tanhpts(2, myTol, myLevels, len, myW, myX);
+	myIters = tanhpts(2, Constants.EPSILON, myLevels, len, myW, myX);
     }
 
     /**
@@ -65,13 +69,15 @@ public final class TanhSinh extends Quadrature {
      * @param absoluteTolerance the smallest acceptable absolute change in integral
      *                          estimates in consecutive iterations that indicates
      *                          the algorithm has converged
+     * @param maxEvaluations    the maximum number of evaluations of each function
+     *                          permitted
      */
-    public TanhSinh(final double relativeTolerance, final double absoluteTolerance) {
-	this(relativeTolerance, absoluteTolerance, 12);
+    public TanhSinh(final double relativeTolerance, final double absoluteTolerance, final int maxEvaluations) {
+	this(relativeTolerance, absoluteTolerance, maxEvaluations, 12);
     }
 
-    public TanhSinh(final double tolerance) {
-	this(1e-12, tolerance, 12);
+    public TanhSinh(final double tolerance, final int maxEvaluations) {
+	this(100.0 * Constants.EPSILON, tolerance, maxEvaluations);
     }
 
     @Override
@@ -79,8 +85,13 @@ public final class TanhSinh extends Quadrature {
 	return tanhsinh(f, a, b, myW, myX);
     }
 
-    private double tanhsinh(final Function<? super Double, Double> f, final double a, final double b, final double[] w,
-	    final double[] x) {
+    @Override
+    public final String getName() {
+	return "TanhSinh";
+    }
+
+    private final double tanhsinh(final Function<? super Double, Double> f, final double a, final double b,
+	    final double[] w, final double[] x) {
 
 	// INITIALIZE CONSTANTS
 	final double h = 0.5 * (b - a);
@@ -112,6 +123,10 @@ public final class TanhSinh extends Quadrature {
 			fev += 2;
 		    }
 		}
+		if (fev >= myMaxEvals) {
+		    myFEvals += fev;
+		    return Double.NaN;
+		}
 	    }
 	    v *= 0.5;
 	    final double est = sum * h * v;
@@ -135,7 +150,7 @@ public final class TanhSinh extends Quadrature {
 	return Double.NaN;
     }
 
-    private static int tanhpts(final int n, final double tol, final int levels, final int len, final double[] w,
+    private static final int tanhpts(final int n, final double tol, final int levels, final int len, final double[] w,
 	    final double[] x) {
 
 	// INITIALIZE CONSTANTS
@@ -174,6 +189,7 @@ public final class TanhSinh extends Quadrature {
 	    rlast = r;
 	    kh += h;
 	}
+
 	return len - 1;
     }
 }

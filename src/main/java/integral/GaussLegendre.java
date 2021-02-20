@@ -22,8 +22,8 @@ public final class GaussLegendre extends Quadrature {
     private static final double W4 = 1.01228536290376259e-1;
     private static final double SQ2 = Constants.SQRT2;
 
-    public GaussLegendre(final double tolerance) {
-	super(tolerance);
+    public GaussLegendre(final double tolerance, final int maxEvaluations) {
+	super(tolerance, maxEvaluations);
     }
 
     @Override
@@ -41,8 +41,13 @@ public final class GaussLegendre extends Quadrature {
 	return ierr[0] == 1 || ierr[0] == -1 ? ans[0] : Double.NaN;
     }
 
-    private static void dgaus8(final Function<? super Double, Double> fun, final double a, final double b,
-	    final double[] err, final double[] ans, final int[] ierr, final int[] fev) {
+    @Override
+    public final String getName() {
+	return "Gauss-Legendre";
+    }
+
+    private void dgaus8(final Function<? super Double, Double> fun, final double a, final double b, final double[] err,
+	    final double[] ans, final int[] ierr, final int[] fev) {
 
 	int k, kml = 6, kmx = 5000, l, lmx, mxl, nbits, nib, nlmx;
 	double ae, anib, area, c, ce, ee, ef, eps, est, gl, glr, tol, vr;
@@ -106,10 +111,19 @@ public final class GaussLegendre extends Quadrature {
 	while (true) {
 
 	    // Compute refined estimates, estimate the error, etc.
+	    if (fev[0] - 8 >= myMaxEvals) {
+		ans[0] = Double.NaN;
+		return;
+	    }
 	    gl = g8(fun, aa[l - 1] + hh[l - 1], hh[l - 1]);
 	    fev[0] += 8;
+	    if (fev[0] - 8 >= myMaxEvals) {
+		ans[0] = Double.NaN;
+		return;
+	    }
 	    gr[l - 1] = g8(fun, aa[l - 1] + 3.0 * hh[l - 1], hh[l - 1]);
 	    fev[0] += 8;
+
 	    k += 16;
 	    area += (Math.abs(gl) + Math.abs(gr[l - 1]) - Math.abs(est));
 	    glr = gl + gr[l - 1];

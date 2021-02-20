@@ -110,7 +110,7 @@ public final class Ensemble extends SeriesAlgorithm {
 	    // initialize variables
 	    myIsAlternating = true;
 	    myMethodCount = myMethods.size();
-	    myOldSignum = 0.0;
+	    myOldSignum = Math.signum(e);
 	    myPrevEst = new double[myMethodCount];
 	    myEst = new double[myMethodCount];
 	    myExcept = new boolean[myMethodCount];

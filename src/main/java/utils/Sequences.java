@@ -19,7 +19,6 @@ public final class Sequences {
      *              begins
      * @return an Iterable object equivalent to the given sequence
      */
-
     public static final <T> Iterable<T> toIterable(final Function<? super Long, ? extends T> func, final long start) {
 	return () -> new Iterator<>() {
 
@@ -81,9 +80,13 @@ public final class Sequences {
     }
 
     /**
+     * Given a sequence of elements a(k), a(k + 1), ..., returns a sequence of
+     * consecutive differences of the elements, e.g. a(k + 1) - a(k), a(k + 2) - a(k
+     * + 1), ....
      * 
-     * @param seq
-     * @return
+     * @param seq the original sequence to transform
+     * @return an Iterable representing the sequence of differences of consecutive
+     *         elements of the original sequence
      */
     public static final Iterable<Double> difference(final Iterable<Double> seq) {
 	return () -> new Iterator<>() {
@@ -179,9 +182,23 @@ public final class Sequences {
     }
 
     /**
+     * When the elements of a series can be expanded as a power series with known
+     * coefficients, the sum of the original series is equivalent to one whose
+     * elements are the coefficients of this power series, multiplied by the zeta
+     * function at the positive integers.
      * 
-     * @param powerSeries
-     * @return
+     * <p>
+     * Formally, given a series S = f(1/2) + f(1/3) ..., we assume that f(x) = a(2)
+     * x^2 + a(3) x^3 + ... for all x >= 1. In this case, by performing a double
+     * summation and interchanging the order of summation, it is shown that S = a(2)
+     * * (1-zeta(2)) + a(3) * (1 - zeta(3)) + .... The advantage of this approach is
+     * that 1 - zeta(n) tends to zero exponentially fast, and typically much faster
+     * than f(1/k) as k -> infinity. This method is very useful for summing infinite
+     * series when f can be expanded in powers and decays slowly in 1/k.
+     * </p>
+     * 
+     * @param powerSeries the power series expansion coefficients a(n) of f
+     * @return an Iterable of elements given as a(n) * (1 - zeta(n)), n >= 2.
      */
     public static final Iterable<Double> zetaTransform(final Iterable<Double> powerSeries) {
 	return () -> new Iterator<>() {
@@ -205,10 +222,13 @@ public final class Sequences {
 	};
     }
 
-    private static final double[] ZETA_TABLE = { Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, 1.6449340668482264,
-	    1.2020569031595943, 1.0823232337111382, 1.0369277551433699, 1.0173430619844491, 1.0083492773819228,
-	    1.0040773561979443, 1.0020083928260822, 1.0009945751278181, 1.0004941886041195, 1.0002460865533080,
-	    1.0001227133475785, 1.0000612481350587, 1.0000305882363070 };
+    private static final double[] ZETA_TABLE = { //
+	    Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, 1.6449340668482264, //
+	    1.2020569031595943, 1.0823232337111382, 1.0369277551433699, //
+	    1.0173430619844491, 1.0083492773819228, 1.0040773561979443, //
+	    1.0020083928260822, 1.0009945751278181, 1.0004941886041195, //
+	    1.0002460865533080, 1.0001227133475785, 1.0000612481350587, //
+	    1.0000305882363070 };
 
     private static final double zeta(final int n) {
 	if (n < ZETA_TABLE.length) {

@@ -8,8 +8,8 @@ import java.util.function.Function;
  */
 public final class Trapezoid extends Quadrature {
 
-    public Trapezoid(final double tolerance) {
-	super(tolerance);
+    public Trapezoid(final double tolerance, final int maxEvaluations) {
+	super(tolerance, maxEvaluations);
     }
 
     @Override
@@ -17,6 +17,11 @@ public final class Trapezoid extends Quadrature {
 	return trapezoid_tol(f, a, b);
     }
 
+    @Override
+    public final String getName() {
+	return "Trapezoid";
+    }
+    
     private double trapezoid_tol(final Function<? super Double, Double> f, final double a, final double b) {
 	double q, qnew;
 	int m = 1;
@@ -27,7 +32,7 @@ public final class Trapezoid extends Quadrature {
 	    if (1 < m && Math.abs(q - qnew) < myTol) {
 		myFEvals += fev[0];
 		return qnew;
-	    } else if (m >= 20) {
+	    } else if (m >= 20 || fev[0] >= myMaxEvals) {
 		myFEvals += fev[0];
 		return Double.NaN;
 	    }

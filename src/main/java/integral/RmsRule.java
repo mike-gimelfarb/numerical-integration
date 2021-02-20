@@ -84,7 +84,6 @@ public final class RmsRule extends Quadrature {
 	    1.196003937945541091670106760660561117114584656319E-2 };
 
     private final double myRelTol;
-    private final int myMemorySize;
 
     /**
      * Creates a new instance of the RMS quadrature integrator.
@@ -95,23 +94,28 @@ public final class RmsRule extends Quadrature {
      * @param tolerance         the smallest acceptable absolute change in integral
      *                          estimates in consecutive iterations that indicates
      *                          the algorithm has converged
-     * @param levels            determines the number of interpolation points
+     * @param maxEvaluations    the maximum number of evaluations of each function
+     *                          permitted
      */
-    public RmsRule(final double tolerance, final double relativeTolerance, final int levels) {
-	super(tolerance);
+    public RmsRule(final double tolerance, final double relativeTolerance, final int maxEvaluations) {
+	super(tolerance, maxEvaluations);
 	myRelTol = relativeTolerance;
-	myMemorySize = levels;
     }
 
-    public RmsRule(final double tolerance) {
-	this(tolerance, 100.0 * Constants.EPSILON, 20000);
+    public RmsRule(final double tolerance, final int maxEvaluations) {
+	this(tolerance, 50.0 * Constants.EPSILON, maxEvaluations);
     }
 
     @Override
     double properIntegral(final Function<? super Double, Double> f, final double a, final double b) {
-	return qxgs(f, a, b, myTol, myRelTol, myMemorySize);
+	return qxgs(f, a, b, myTol, myRelTol, myMaxEvals);
     }
 
+    @Override
+    public final String getName() {
+	return "RMS Rule";
+    }
+    
     private double qxgs(final Function<? super Double, Double> f, final double a, final double b, final double epsabs,
 	    final double epsrel, final int limit) {
 

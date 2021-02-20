@@ -17,8 +17,8 @@ public final class NewtonCotes extends Quadrature {
     private static final double W3 = 27.0 / 140.0;
     private static final double W4 = 272.0 / 140.0;
 
-    public NewtonCotes(final double tolerance) {
-	super(tolerance);
+    public NewtonCotes(final double tolerance, final int maxEvaluations) {
+	super(tolerance, maxEvaluations);
     }
 
     @Override
@@ -26,6 +26,11 @@ public final class NewtonCotes extends Quadrature {
 	return dqnc79(f, a, b);
     }
 
+    @Override
+    public final String getName() {
+	return "Newton-Cotes";
+    }
+    
     private double dqnc79(final Function<? super Double, Double> fun, final double a, final double b) {
 	double ae, area, bank, blocal, c, ce, ee, ef, eps, q13, q7, q7l, sq2 = Constants.SQRT2, test, tol, vr, ans;
 	int i, kml = 7, kmx = 5000, l, lmn, lmx, nbits, nib, nlmn = 2, nlmx, fev = 0, k = 0;
@@ -87,6 +92,10 @@ public final class NewtonCotes extends Quadrature {
 	    for (i = 2; i <= 12; i += 2) {
 		f[i - 1] = fun.apply(aa[l - 1] + (i - 1) * hh[l - 1]);
 		++fev;
+		if (fev >= myMaxEvals) {
+		    myFEvals += fev;
+		    return Double.NaN;
+		}
 	    }
 	    k += 6;
 

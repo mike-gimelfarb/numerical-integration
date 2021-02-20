@@ -24,30 +24,20 @@ import utils.Constants;
  */
 public final class BulirschStoer extends Quadrature {
 
-    private final int myMaxEvals;
-
-    /**
-     * Creates a new instance of the Bulirsch-Stoer quadrature integrator.
-     * 
-     * @param tolerance      the smallest acceptable absolute change in integral
-     *                       estimates in consecutive iterations that indicates the
-     *                       algorithm has converged
-     * @param maxEvaluations maximum number of functions evaluations
-     */
     public BulirschStoer(final double tolerance, final int maxEvaluations) {
-	super(tolerance);
-	myMaxEvals = maxEvaluations;
-    }
-
-    public BulirschStoer(final double tolerance) {
-	this(tolerance, 9999);
+	super(tolerance, maxEvaluations);
     }
 
     @Override
     final double properIntegral(final Function<? super Double, Double> f, final double a, final double b) {
 	return bulirschStoer(f, a, b);
     }
-
+    
+    @Override
+    public final String getName() {
+	return "Bulirsch-Stoer";
+    }
+    
     private double bulirschStoer(final Function<? super Double, Double> func, final double a, final double b) {
 
 	// keep a stack of interval partitions which need to be divided
@@ -80,7 +70,7 @@ public final class BulirschStoer extends Quadrature {
 	    iratex(func, a1, b1, epsin, epsout, estout, indout, fev, work1, work2);
 
 	    // empty intervals are ignored
-	    if (b1 - a1 == 0.0) {
+	    if (b1 == a1) {
 		continue;
 	    }
 
