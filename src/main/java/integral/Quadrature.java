@@ -85,9 +85,37 @@ public abstract class Quadrature {
 	    return properIntegral(f, a, b);
 	}
 
-	// improper integral is not handled by default
-	throw new IllegalArgumentException("The quadrature subroutine" + " " + getClass().getSimpleName() + " "
-		+ "does not handle improper integrals. Try using a transformation or integrate piecewise.");
+	// improper integral of the form [a, infinity]
+	if (Double.isFinite(a) && !Double.isFinite(b)) {
+	    final Function<Double, Double> ft = t -> {
+		if (t <= 0.0) {
+		    return 0.0;
+		}
+		final double x = a - 1.0 + 1.0 / t;
+		final double dx = 1.0 / t / t;
+		return f.apply(x) * dx;
+	    };
+	    return properIntegral(ft, 0.0, 1.0);
+	}
+
+	// improper integral of the form [-infinity, b]
+	if (!Double.isFinite(a) && Double.isFinite(b)) {
+	    final Function<Double, Double> ft = t -> {
+		if (t <= 0.0) {
+		    return 0.0;
+		}
+		final double x = b + 1.0 - 1.0 / t;
+		final double dx = 1.0 / t / t;
+		return f.apply(x) * dx;
+	    };
+	    return properIntegral(ft, 0.0, 1.0);
+	}
+
+	// doubly improper integral
+	final QuadratureResult left = integrate(f, a, 0.0);
+	final QuadratureResult right = integrate(f, 0.0, b);
+	return new QuadratureResult(left.estimate + right.estimate, left.error + right.error,
+		left.evaluations + right.evaluations, left.converged && right.converged);
     }
 
     /**
