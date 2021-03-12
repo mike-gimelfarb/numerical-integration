@@ -80,7 +80,7 @@ public final class Romberg extends Quadrature {
     }
 
     @Override
-    final double properIntegral(final Function<? super Double, Double> f, final double a, final double b) {
+    final QuadratureResult properIntegral(final Function<? super Double, Double> f, final double a, final double b) {
 	switch (myMethod) {
 	case RICHARDSON:
 	    return romberg(f, a, b);
@@ -89,7 +89,7 @@ public final class Romberg extends Quadrature {
 	case HAVIE:
 	    return havie(f, a, b, 2);
 	default:
-	    return Double.NaN;
+	    return new QuadratureResult(Double.NaN, Double.NaN, 0, false);
 	}
     }
 
@@ -98,12 +98,8 @@ public final class Romberg extends Quadrature {
 	return "Romberg-" + myMethod.toString();
     }
 
-    private final double romberg(final Function<? super Double, Double> func, final double a, final double b) {
-
-	// empty integral
-	if (a == b) {
-	    return 0.0;
-	}
+    private final QuadratureResult romberg(final Function<? super Double, Double> func, final double a,
+	    final double b) {
 
 	// prepare variables
 	final double[] work = new double[myMaxEvals + 1];
@@ -120,7 +116,7 @@ public final class Romberg extends Quadrature {
 	final int nleast = 6;
 
 	// main iterations
-	for (int i = 1; i <= myMaxEvals && nfev < myMaxEvals; ++i) {
+	for (int i = 1; nfev < myMaxEvals; ++i) {
 	    h *= 0.5;
 	    double sum1 = 0.0;
 	    double sumabs = 0.0;
@@ -129,6 +125,9 @@ public final class Romberg extends Quadrature {
 		sumabs += Math.abs(fcnxi);
 		sum1 += fcnxi;
 		++nfev;
+		if (nfev >= myMaxEvals) {
+		    return new QuadratureResult(work[0], Double.NaN, nfev, false);
+		}
 	    }
 	    t = 0.5 * t + h * sum1;
 	    tabs = tabs * 0.5 + Math.abs(h) * sumabs;
@@ -147,8 +146,7 @@ public final class Romberg extends Quadrature {
 		if (nleast <= i) {
 		    final double x = Math.abs(work[0] - qx2) + Math.abs(qx2 - qx1);
 		    if (x <= 3.0 * tabs * (Math.abs(myRelTol) + rnderr) || x <= 3.0 * Math.abs(myTol)) {
-			myFEvals += nfev;
-			return work[0];
+			return new QuadratureResult(work[0], x, nfev, true);
 		    }
 		}
 
@@ -158,11 +156,10 @@ public final class Romberg extends Quadrature {
 	    qx2 = work[0];
 	    nx <<= 1;
 	}
-	myFEvals += nfev;
-	return Double.NaN;
+	return new QuadratureResult(work[0], Double.NaN, nfev, false);
     }
 
-    private final double cadre(final Function<? super Double, Double> func, final double a, final double b) {
+    private final QuadratureResult cadre(final Function<? super Double, Double> func, final double a, final double b) {
 	final int mxstge = 30, maxtbl = 10, maxts = 2049;
 	final double aitlow = 1.1, aittol = 0.1, h2tol = 0.15, tljump = 0.01;
 	final boolean[] reglsv = new boolean[mxstge];
@@ -176,10 +173,6 @@ public final class Romberg extends Quadrature {
 	double astep, beg, bma, curest, diff = 0.0, end, ergoal = 0.0, erra, errer = 0.0, errr, fbeg, fbeg2 = 0.0, fend,
 		fextm1, fextrp = 0.0, fn, fnsize, h2next = 0.0, h2tfex, hovn, prever, rnderr, sing, singnx = 0.0,
 		slope = 0.0, stage, step, stepmn, sum1, sumabs, tabs, tabtlm = 0.0, vint, result = 0.0, error = 0.0;
-
-	if (a == b) {
-	    return 0.0;
-	}
 
 	vint = 0.0;
 	rn[0] = 0.7142005;
@@ -213,8 +206,7 @@ public final class Romberg extends Quadrature {
 	astep = Math.abs(step);
 	if (astep < stepmn) {
 	    ind = 5;
-	    myFEvals += fev;
-	    return curest + vint;
+	    return new QuadratureResult(curest + vint, error, fev, true);
 	}
 	t[1 - 1][1 - 1] = fbeg + fend;
 	tabs = Math.abs(fbeg) + Math.abs(fend);
@@ -235,8 +227,7 @@ public final class Romberg extends Quadrature {
 		    iend += n;
 		    if (maxts < iend) {
 			ind = 4;
-			myFEvals += fev;
-			return curest + vint;
+			return new QuadratureResult(curest + vint, error, fev, true);
 		    }
 		    hovn = step / fn;
 		    iii = iend;
@@ -247,8 +238,7 @@ public final class Romberg extends Quadrature {
 			iii -= 2;
 			--ii;
 			if (fev >= myMaxEvals) {
-			    myFEvals += fev;
-			    return Double.NaN;
+			    return new QuadratureResult(Double.NaN, error, fev, false);
 			}
 		    }
 		    istep = 2;
@@ -286,8 +276,7 @@ public final class Romberg extends Quadrature {
 			    diff = Math.abs(func.apply(beg + rn[i - 1] * step) - fbeg2 - rn[i - 1] * slope);
 			    ++fev;
 			    if (fev >= myMaxEvals) {
-				myFEvals += fev;
-				return Double.NaN;
+				return new QuadratureResult(Double.NaN, error, fev, false);
 			    }
 			    if (tabtlm < diff) {
 				next = 330;
@@ -322,8 +311,7 @@ public final class Romberg extends Quadrature {
 			    ++fev;
 			    flag = 330;
 			    if (fev >= myMaxEvals) {
-				myFEvals += fev;
-				return Double.NaN;
+				return new QuadratureResult(Double.NaN, error, fev, false);
 			    }
 			} else {
 			    flag = 380;
@@ -352,8 +340,7 @@ public final class Romberg extends Quadrature {
 			    ++fev;
 			    flag = 330;
 			    if (fev >= myMaxEvals) {
-				myFEvals += fev;
-				return Double.NaN;
+				return new QuadratureResult(Double.NaN, error, fev, false);
 			    }
 			} else {
 			    flag = 380;
@@ -497,8 +484,7 @@ public final class Romberg extends Quadrature {
 			diff = Math.abs(func.apply(beg + rn[i - 1] * step) - fbeg2 - rn[i - 1] * slope);
 			++fev;
 			if (fev >= myMaxEvals) {
-			    myFEvals += fev;
-			    return Double.NaN;
+			    return new QuadratureResult(Double.NaN, error, fev, false);
 			}
 		    } else {
 			ind = 3;
@@ -524,8 +510,7 @@ public final class Romberg extends Quadrature {
 		} else {
 		    --istage;
 		    if (istage == 0) {
-			myFEvals += fev;
-			return result;
+			return new QuadratureResult(result, error, fev, true);
 		    }
 		    reglar = reglsv[istage - 1];
 		    beg = begin[istage - 1];
@@ -544,8 +529,7 @@ public final class Romberg extends Quadrature {
 		astep = Math.abs(step);
 		if (astep < stepmn) {
 		    ind = 5;
-		    myFEvals += fev;
-		    return curest + vint;
+		    return new QuadratureResult(curest + vint, error, fev, true);
 		}
 		t[1 - 1][1 - 1] = fbeg + fend;
 		tabs = Math.abs(fbeg) + Math.abs(fend);
@@ -558,8 +542,7 @@ public final class Romberg extends Quadrature {
 	    if (flag == 380) {
 		if (istage == mxstge) {
 		    ind = 5;
-		    myFEvals += fev;
-		    return curest + vint;
+		    return new QuadratureResult(curest + vint, error, fev, true);
 		}
 		if (!right) {
 		    reglsv[istage + 1 - 1] = reglar;
@@ -576,8 +559,7 @@ public final class Romberg extends Quadrature {
 		    nnleft = ibeg - ibegs[istage - 1];
 		    if (maxts <= end + nnleft) {
 			ind = 4;
-			myFEvals += fev;
-			return curest + vint;
+			return new QuadratureResult(curest + vint, error, fev, true);
 		    }
 		    iii = ibegs[istage - 1];
 		    ii = iend;
@@ -609,8 +591,7 @@ public final class Romberg extends Quadrature {
 		astep = Math.abs(step);
 		if (astep < stepmn) {
 		    ind = 5;
-		    myFEvals += fev;
-		    return curest + vint;
+		    return new QuadratureResult(curest + vint, error, fev, true);
 		}
 		t[1 - 1][1 - 1] = fbeg + fend;
 		tabs = Math.abs(fbeg) + Math.abs(fend);
@@ -621,17 +602,13 @@ public final class Romberg extends Quadrature {
 	}
     }
 
-    private final double havie(final Function<? super Double, Double> func, final double a, final double b,
+    private final QuadratureResult havie(final Function<? super Double, Double> func, final double a, final double b,
 	    final int iop) {
 	double alf, alfnj, alfno = 0.0, ar = 0.0, bet, betnj, betno, const1, const2, deltan, endpts = 0.0, error,
 		fac1 = 0.411233516712057, fac2 = 0.822467033441132, factor, gamman, hnstep, pi = Math.PI, r1, r2, rn,
-		rnderr, rounde, tend = 0.0, triarg = 0.0, umid, xmin, xplus, epsout;
+		rnderr, rounde, tend = 0.0, triarg = 0.0, umid, xmin, xplus, epsout = Double.NaN;
 	int i, index = 0, iout = 0, j, n, nhalf, nupper = 9, fev = 0;
 	final double[] acof = new double[11], bcof = new double[nupper + 1];
-
-	if (a == b) {
-	    return 0.0;
-	}
 
 	// Set coefficients in formula for accumulated roundoff error,
 	// rounde = rnderr*(r1+r2*n), where r1, r2 are two empirical constants
@@ -698,8 +675,7 @@ public final class Romberg extends Quadrature {
 		    fev += 2;
 		    alfnj += hnstep;
 		    if (fev >= myMaxEvals) {
-			myFEvals += fev;
-			return Double.NaN;
+			return new QuadratureResult(Double.NaN, epsout, fev, false);
 		    }
 		}
 		umid *= hnstep;
@@ -724,8 +700,7 @@ public final class Romberg extends Quadrature {
 		    const1 = alfnj;
 		    const2 = betnj;
 		    if (fev >= myMaxEvals) {
-			myFEvals += fev;
-			return Double.NaN;
+			return new QuadratureResult(Double.NaN, epsout, fev, false);
 		    }
 		}
 		umid = hnstep * umid - ar * endpts;
@@ -772,8 +747,7 @@ public final class Romberg extends Quadrature {
 		n <<= 1;
 		--index;
 		++n;
-		myFEvals += fev;
-		return alf * acof[iout - 1];
+		return new QuadratureResult(alf * acof[iout - 1], epsout, fev, true);
 	    }
 	    nhalf = n;
 	    n <<= 1;
@@ -791,7 +765,6 @@ public final class Romberg extends Quadrature {
 	n <<= 1;
 	--index;
 	++n;
-	myFEvals += fev;
-	return alf * acof[iout - 1];
+	return new QuadratureResult(alf * acof[iout - 1], epsout, fev, true);
     }
 }

@@ -36,6 +36,7 @@ public final class Richardson extends SeriesAlgorithm {
     private final int myM;
     private final double[] myG;
     private final double[][][] myPsiAI, myPsiQ, myPsiG;
+    private int evals;
 
     /**
      * Creates an instance of the d-transform for a given auxiliary sequence.
@@ -164,25 +165,27 @@ public final class Richardson extends SeriesAlgorithm {
     }
 
     @Override
-    public final double limit(final Iterable<Double> seq, final boolean series, final int extrapolateStart) {
+    public final SeriesSolution limit(final Iterable<Double> seq, final boolean series, final int extrapolateStart) {
 
 	// the sequence will be consumed one element at time
 	final Iterator<Double> it = seq.iterator();
 	myPrevIndex = -1;
 	myIndex = 0;
+	evals = 0;
 
 	// read the first elements in the partial sum
 	double partialSum = 0.0;
 	for (int i = 0; i < extrapolateStart; ++i) {
 	    partialSum += it.next();
 	    ++myIndex;
+	    ++evals;
 	}
 
 	// extract the first element of the transformed series
 	int Rl = computeR(0);
 	double al = computePartialSum(it, Rl);
 	if (Double.isNaN(al)) {
-	    return Double.NaN;
+	    return new SeriesSolution(Double.NaN, Double.NaN, evals, false);
 	}
 	updateG(Rl);
 	updatePsi(al, Rl, 0);
@@ -211,14 +214,14 @@ public final class Richardson extends SeriesAlgorithm {
 		    convergeSteps = 0;
 		}
 		if (convergeSteps >= myPatience) {
-		    return result + partialSum;
+		    return new SeriesSolution(result + partialSum, error, evals, true);
 		}
 	    }
 	    oldResult = result;
 	}
 
 	// could not converge
-	return Double.NaN;
+	return new SeriesSolution(Double.NaN, Double.NaN, evals, false);
     }
 
     @Override
@@ -236,7 +239,7 @@ public final class Richardson extends SeriesAlgorithm {
 	for (int i = 1 + myPrevIndex; i <= newIndex; ++i) {
 	    myElements[i] = it.next();
 	    ++myIndex;
-	    ++myFEvals;
+	    ++evals;
 	}
 	myPrevIndex = newIndex;
 

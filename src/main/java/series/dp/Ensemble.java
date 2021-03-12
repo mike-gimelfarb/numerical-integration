@@ -239,10 +239,10 @@ public final class Ensemble extends SeriesAlgorithm {
     }
 
     @Override
-    public final double limit(final Iterable<Double> seq, final boolean series, final int extrapolateStart) {
+    public final SeriesSolution limit(final Iterable<Double> seq, final boolean series, final int extrapolateStart) {
 	myCheckForSequenceOnly = !series;
-	final double result = super.limit(seq, series, extrapolateStart);
-	if (myPrint > 0 && myBestMethod >= 0 && !Double.isNaN(result)) {
+	final SeriesSolution result = super.limit(seq, series, extrapolateStart);
+	if (myPrint > 0 && myBestMethod >= 0 && result.converged) {
 	    System.out.println(
 		    "Converged at iteration " + myIndex + " with method " + myMethods.get(myBestMethod).getName());
 	}

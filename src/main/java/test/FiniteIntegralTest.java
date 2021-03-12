@@ -4,6 +4,7 @@ import java.text.DecimalFormat;
 
 import integral.*;
 import integral.ClenshawCurtis.ClenshawCurtisExtrapolationMethod;
+import integral.Quadrature.QuadratureResult;
 import integral.Romberg.RombergExtrapolationMethod;
 import integral.Simpson.SimpsonAdaptationType;
 import test.TestProblems.Integral;
@@ -25,8 +26,8 @@ public final class FiniteIntegralTest {
 
 	// algorithms
 	final double tol = 1e-8;
-	final int maxev = 10000;
-	Quadrature[] ALGOS = { new BulirschStoer(tol, maxev),
+	final int maxev = 30000;
+	Quadrature[] ALGOS = { //
 		new ClenshawCurtis(tol, maxev, ClenshawCurtisExtrapolationMethod.HAVIE), //
 		new ClenshawCurtis(tol, maxev, ClenshawCurtisExtrapolationMethod.OLIVER), //
 		new GaussKronrod(tol, maxev), //
@@ -38,32 +39,32 @@ public final class FiniteIntegralTest {
 		new Romberg(tol, maxev, RombergExtrapolationMethod.HAVIE), //
 		new Romberg(tol, maxev, RombergExtrapolationMethod.RICHARDSON), //
 		new Simpson(tol, maxev, SimpsonAdaptationType.GLOBAL), //
-		new TanhSinh(tol, maxev), //
-		new Trapezoid(tol, maxev) //
-	};
+		new Simpson(tol, maxev, SimpsonAdaptationType.LOCAL), //
+		new TanhSinh(tol, maxev) };
 
-	Integral[][] ALL = { TestProblems.SIMPLE_INTEGRALS, TestProblems.OSCILLATING_INTEGRALS,
+	Integral[][] ALL = { //
+		TestProblems.SIMPLE_INTEGRALS, //
+		TestProblems.OSCILLATING_INTEGRALS, //
 		TestProblems.IRREGULAR_INTEGRALS };
 	String[] disp = { "Simple", "Oscillating", "Irregular" };
+
 	int nintegs = 0;
 	for (final Integral[] integrals_of_type : ALL) {
 	    nintegs += integrals_of_type.length;
 	}
-
 	final double[][] errors = new double[nintegs][ALGOS.length];
 	final int[][] fev = new int[nintegs][ALGOS.length];
-
 	int i = 0;
 	int row = 0;
 	for (Integral[] integral_of_type : ALL) {
 	    for (Integral integral : integral_of_type) {
 		int col = 0;
 		for (Quadrature alg : ALGOS) {
-		    alg.resetCounter();
-		    final double value = alg.integrate(integral.myF, integral.myLower, integral.myUpper);
+		    final QuadratureResult result = alg.integrate(integral.myF, integral.myLower, integral.myUpper);
+		    final double value = result.estimate;
 		    final double actual = integral.myValue;
 		    errors[row][col] = Math.abs(value - actual);
-		    fev[row][col] = alg.getEvaluations();
+		    fev[row][col] = result.evaluations;
 		    ++col;
 		}
 		++row;

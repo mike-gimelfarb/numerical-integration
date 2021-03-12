@@ -3,14 +3,19 @@ package test;
 import java.util.function.Function;
 
 import series.dp.*;
+import series.dp.SeriesAlgorithm.SeriesSolution;
 import test.TestProblems.InfiniteSeries;
 import utils.Sequences;
 
 public final class SeriesTest {
 
     public static final void main(String[] args) {
-	InfiniteSeries[][] ALL_SERIES = { TestProblems.ALTERNATING_SERIES, TestProblems.IRREGULAR_SERIES,
-		TestProblems.FAST_CONVERGING_SERIES, TestProblems.SLOW_CONVERGING_SERIES, TestProblems.ARCANE_SERIES };
+	InfiniteSeries[][] ALL_SERIES = { //
+		TestProblems.ALTERNATING_SERIES, //
+		TestProblems.IRREGULAR_SERIES, //
+		TestProblems.FAST_CONVERGING_SERIES, //
+		TestProblems.SLOW_CONVERGING_SERIES, //
+		TestProblems.ARCANE_SERIES };
 	String[] disp = { "Alternating", "Irregular", "Fast", "Slow", "Arcane" };
 	int i = 0;
 	for (InfiniteSeries[] series_of_type : ALL_SERIES) {
@@ -36,16 +41,12 @@ public final class SeriesTest {
 		    func = series.mySeries;
 		}
 		final SeriesAlgorithm alg = new Ensemble(tol, 500, nconv, 0);
-		final double limit = alg.limit(Sequences.toIterable(func, 1L), true, 3);
+		final SeriesSolution sol = alg.limit(Sequences.toIterable(func, 1L), true, 3);
+		final double limit = sol.limit;
 		final double actual = series.myLimit;
 		final double error = Math.abs(limit - actual);
 		System.out.println(error);
-		final int sev;
-		if (algtoalt != null) {
-		    sev = algtoalt.countEvaluations();
-		} else {
-		    sev = alg.countEvaluations();
-		}
+		final int sev = sol.evaluations;
 		System.out.println(sev);
 	    }
 	    i += 1;

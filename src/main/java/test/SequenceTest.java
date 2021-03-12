@@ -1,6 +1,7 @@
 package test;
 
 import series.dp.*;
+import series.dp.SeriesAlgorithm.SeriesSolution;
 import test.TestProblems.Sequence;
 
 public final class SequenceTest {
@@ -16,10 +17,11 @@ public final class SequenceTest {
 		final int nconv = 5;
 		final Iterable<Double> func = seq.mySequence;
 		final SeriesAlgorithm alg = new Ensemble(tol, 500, nconv, 0);
-		final double limit = alg.limit(func, false);
+		final SeriesSolution sol = alg.limit(func, false);
+		final double limit = sol.limit;
 		final double actual = seq.myLimit;
 		final double error = Math.abs(limit - actual);
-		final int sev = alg.countEvaluations();
+		final int sev = sol.evaluations;
 		System.out.println(error);
 		System.out.println(sev);
 	    }

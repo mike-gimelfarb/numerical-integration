@@ -63,14 +63,14 @@ public final class ClenshawCurtis extends Quadrature {
     }
 
     @Override
-    final double properIntegral(final Function<? super Double, Double> f, final double a, final double b) {
+    final QuadratureResult properIntegral(final Function<? super Double, Double> f, final double a, final double b) {
 	switch (myMethod) {
 	case HAVIE:
 	    return havie(f, a, b);
 	case OLIVER:
 	    return oliver(f, a, b);
 	default:
-	    return Double.NaN;
+	    return new QuadratureResult(Double.NaN, Double.NaN, 0, false);
 	}
     }
 
@@ -79,19 +79,20 @@ public final class ClenshawCurtis extends Quadrature {
 	return "Clenshaw-Curtis-" + myMethod.toString();
     }
 
-    private final double havie(final Function<? super Double, Double> f, double a, double b) {
+    private final QuadratureResult havie(final Function<? super Double, Double> f, double a, double b) {
 	final double[] result = new double[1];
 	final double[] epsout = new double[1];
 	final int[] fev = new int[1];
+	final boolean[] success = new boolean[1];
 	final double epsin = myTol;
 	final int nupper = SimpleMath.log2Int(myMaxEvals) - 1;
-	havie(f, a, b, nupper, epsin, epsout, result, fev);
-	myFEvals += fev[0];
-	return result[0];
+	havie(f, a, b, nupper, epsin, epsout, result, fev, success);
+	return new QuadratureResult(result[0], epsout[0], fev[0], success[0]);
     }
 
     private final void havie(final Function<? super Double, Double> f, double a, double b, final int nupper,
-	    final double epsin, final double[] epsout, final double[] result, final int[] fev) {
+	    final double epsin, final double[] epsout, final double[] result, final int[] fev,
+	    final boolean[] success) {
 	double a0, a1, a2, alf, alfnj, alfno, bet, betnj, betno, bounds, cof, cofmax, const1, const2, deln, deltan,
 		error, etank, gamman, hnstep;
 	double r1, r2, rk, rn, rnderr, rounde, tend, tnew, triarg, umid, wmean, xmin, xplus, xsink;
@@ -101,15 +102,11 @@ public final class ClenshawCurtis extends Quadrature {
 	final double[] ccof = new double[(mem << 1) + 1];
 	int i, index, j, k, ksign, n, ncof, nhalf, nn;
 
-	fev[0] = 0;
-	if (a == b) {
-	    result[0] = 0.0;
-	    return;
-	}
-
 	// Set coefficients in formula for accumulated roundoff error.
 	// N is the current number of function values used.
+	fev[0] = 0;
 	rnderr = Constants.EPSILON;
+	success[0] = true;
 
 	r1 = 1.0;
 	r2 = 2.0;
@@ -246,6 +243,7 @@ public final class ClenshawCurtis extends Quadrature {
 		    umid = alf * (umid + deln);
 		    deln *= alf;
 		    result[0] = alf * tnew;
+		    success[0] = true;
 		    return;
 		}
 	    }
@@ -260,6 +258,7 @@ public final class ClenshawCurtis extends Quadrature {
 		umid = alf * (umid + deln);
 		deln *= alf;
 		result[0] = alf * tnew;
+		success[0] = false;
 		return;
 	    }
 	    System.arraycopy(ccof, 0, acof, 0, n + 1);
@@ -273,7 +272,7 @@ public final class ClenshawCurtis extends Quadrature {
 	}
     }
 
-    private final double oliver(final Function<? super Double, Double> f, double a, double b) {
+    private final QuadratureResult oliver(final Function<? super Double, Double> f, double a, double b) {
 	final double eps = myTol;
 	final double acc = 0.0;
 	final double eta = SimpleMath.D1MACH[1 - 1];
@@ -281,14 +280,14 @@ public final class ClenshawCurtis extends Quadrature {
 	final double[] ans = new double[1];
 	final double[] error = new double[1];
 	final int[] fev = new int[1];
-	adapquad(f, a, b, eps, acc, eta, divmax, ans, error, fev, myMaxEvals);
-	myFEvals += fev[0];
-	return ans[0];
+	final boolean[] success = new boolean[1];
+	adapquad(f, a, b, eps, acc, eta, divmax, ans, error, fev, myMaxEvals, success);
+	return new QuadratureResult(ans[0], error[0], fev[0], success[0]);
     }
 
     private static final void adapquad(final Function<? super Double, Double> f, double a, double b, double eps,
 	    double acc, final double eta, final int divmax, final double[] ans, final double[] error, final int[] fev,
-	    final int maxfev) {
+	    final int maxfev, final boolean[] success) {
 	int i, j = 0, m, mmax, n, n2, nmax, maxrule, order = 0, div;
 	double c, cprev = 0, e = 0, eprev = 0, fmax = 0, fmin = 0, h = 0, hmin, iint = 0, intprev = 0, k = 0, k1 = 0,
 		re = 0, x, xa, xb, xc;
@@ -303,9 +302,7 @@ public final class ClenshawCurtis extends Quadrature {
 
 	ans[0] = error[0] = 0.0;
 	fev[0] = 0;
-	if (a == b) {
-	    return;
-	}
+	success[0] = true;
 	if (a > b) {
 	    c = b;
 	    b = a;
@@ -379,7 +376,7 @@ public final class ClenshawCurtis extends Quadrature {
 		}
 		next = 1;
 		if (fev[0] > maxfev) {
-		    ans[0] = Double.NaN;
+		    success[0] = false;
 		    return;
 		}
 	    }
@@ -404,7 +401,7 @@ public final class ClenshawCurtis extends Quadrature {
 			fmin = fx[n - i];
 		    }
 		    if (fev[0] > maxfev) {
-			ans[0] = Double.NaN;
+			success[0] = false;
 			return;
 		    }
 		}
@@ -501,6 +498,7 @@ public final class ClenshawCurtis extends Quadrature {
 		    }
 		    ans[0] += iint;
 		    if (div == 0) {
+			success[0] = true;
 			return;
 		    }
 		    --div;
@@ -546,7 +544,7 @@ public final class ClenshawCurtis extends Quadrature {
 		    next = 4;
 		} else {
 		    if (h < hmin) {
-			ans[0] = Double.NaN;
+			success[0] = false;
 			return;
 		    }
 		    xs[div] = xb;
@@ -559,7 +557,6 @@ public final class ClenshawCurtis extends Quadrature {
 		}
 	    }
 	}
-
     }
 
     private static final int quadrule(final double[] t, final double[] w, final double[] w1, final int n, final int n2,

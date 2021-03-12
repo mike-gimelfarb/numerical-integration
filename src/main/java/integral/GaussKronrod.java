@@ -80,7 +80,8 @@ public final class GaussKronrod extends Quadrature {
     }
 
     @Override
-    protected final double properIntegral(final Function<? super Double, Double> f, final double a, final double b) {
+    protected final QuadratureResult properIntegral(final Function<? super Double, Double> f, final double a,
+	    final double b) {
 
 	// prepare variables
 	final double[] result = new double[1];
@@ -90,16 +91,15 @@ public final class GaussKronrod extends Quadrature {
 
 	// call main subroutine
 	dqags(f, a, b, myTol, myRelTol, result, abserr, neval, ier, myMaxEvals);
-	myFEvals += neval[0];
-	return ier[0] == 0 ? result[0] : Double.NaN;
+	return new QuadratureResult(result[0], abserr[0], neval[0], ier[0] == 0);
     }
 
     @Override
-    public final double integrate(final Function<? super Double, Double> f, final double a, final double b) {
+    public final QuadratureResult integrate(final Function<? super Double, Double> f, final double a, final double b) {
 
 	// null integral
 	if (a == b) {
-	    return 0.0;
+	    return new QuadratureResult(0.0, 0.0, 0, true);
 	}
 
 	// make sure a < b
@@ -130,8 +130,7 @@ public final class GaussKronrod extends Quadrature {
 
 	// call main subroutine
 	dqagi1(f, bound, inf, myTol, myRelTol, result, abserr, neval, ier, myMaxEvals);
-	myFEvals += neval[0];
-	return ier[0] == 0 ? result[0] : Double.NaN;
+	return new QuadratureResult(result[0], abserr[0], neval[0], ier[0] == 0);
     }
 
     @Override

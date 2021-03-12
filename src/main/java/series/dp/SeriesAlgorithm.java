@@ -10,6 +10,27 @@ import java.util.function.Function;
  */
 public abstract class SeriesAlgorithm {
 
+    public static final class SeriesSolution {
+
+	public final double limit;
+	public final double error;
+	public final int evaluations;
+	public final boolean converged;
+
+	public SeriesSolution(final double est, final double err, final int evals, final boolean success) {
+	    limit = est;
+	    error = err;
+	    evaluations = evals;
+	    converged = success;
+	}
+
+	@Override
+	public String toString() {
+	    return String.format("%.08f", limit) + " +- " + String.format("%.08f", error) + "\n" + "evaluations: "
+		    + evaluations + "\n" + "converged: " + converged;
+	}
+    }
+
     protected static final double HUGE = 1e60;
     protected static final double TINY = 1e-60;
 
@@ -17,7 +38,6 @@ public abstract class SeriesAlgorithm {
     protected final int myMaxIters;
     protected final int myPatience;
 
-    protected int myFEvals;
     protected int myIndex;
 
     /**
@@ -35,7 +55,6 @@ public abstract class SeriesAlgorithm {
 	myTol = tolerance;
 	myMaxIters = maxIters;
 	myPatience = patience;
-	myFEvals = 0;
     }
 
     /**
@@ -55,24 +74,6 @@ public abstract class SeriesAlgorithm {
      */
     public abstract String getName();
 
-    /**
-     * Sets the variable that keeps track of the number of sequence evaluations to
-     * zero.
-     */
-    public final void resetCounter() {
-	myFEvals = 0;
-    }
-
-    /**
-     * Returns the number of evaluations of the sequence made thus far.
-     * 
-     * @return an integer representing the number of evaluations of the sequence
-     *         made thus far.
-     */
-    public final int countEvaluations() {
-	return myFEvals;
-    }
-
     // ==========================================================================
     // LIMITS
     // ==========================================================================
@@ -89,16 +90,17 @@ public abstract class SeriesAlgorithm {
      * @return a Double that approximates the limit of the sequence or corresponding
      *         series. If the limit cannot be determined, returns NaN
      */
-    public double limit(final Iterable<Double> seq, final boolean series, final int extrapolateStart) {
+    public SeriesSolution limit(final Iterable<Double> seq, final boolean series, final int extrapolateStart) {
 	myIndex = 0;
 	int convergeSteps = 0;
 	int indexBeforeExtrap = 0;
+	int evals = 0;
 	double partial = 0.0;
 	double term = 0.0;
 	double est = Double.NaN;
 
 	for (final double e : seq) {
-	    ++myFEvals;
+	    ++evals;
 
 	    // check if extrapolation starts
 	    if (indexBeforeExtrap < extrapolateStart) {
@@ -132,7 +134,7 @@ public abstract class SeriesAlgorithm {
 		    convergeSteps = 0;
 		}
 		if (convergeSteps >= myPatience) {
-		    return est + partial;
+		    return new SeriesSolution(est + partial, error, evals, true);
 		}
 		if (myIndex >= myMaxIters || !Double.isFinite(error)) {
 		    break;
@@ -141,7 +143,7 @@ public abstract class SeriesAlgorithm {
 	}
 
 	// did not achieve the desired error
-	return Double.NaN;
+	return new SeriesSolution(est + partial, Double.NaN, evals, false);
     }
 
     /**
@@ -154,7 +156,7 @@ public abstract class SeriesAlgorithm {
      * @return a Double that approximates the limit of the sequence or corresponding
      *         series. If the limit cannot be determined, returns NaN
      */
-    public double limit(final Iterable<Double> seq, final boolean series) {
+    public SeriesSolution limit(final Iterable<Double> seq, final boolean series) {
 	return limit(seq, series, 0);
     }
 
@@ -251,13 +253,13 @@ public abstract class SeriesAlgorithm {
 		    final double result = coeff * term;
 		    i <<= 1L;
 		    coeff *= 2.0;
-		    ++myFEvals;
 		    return result;
 		}
 	    };
 
 	    // determine the next term as the infinite series of this sequence
-	    final double term = limit(condensed, true);
+	    final SeriesSolution sol = limit(condensed, true);
+	    final double term = sol.limit;
 	    if (((k - 1) & 1L) == 0) {
 		return term;
 	    } else {

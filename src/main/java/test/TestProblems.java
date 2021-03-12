@@ -268,7 +268,7 @@ public final class TestProblems {
 	    new Integral(x -> 2. / (2 + Math.sin(10 * Math.PI * x)), 0, 1, 1.15470053837925), //
 
 	    // oscillating
-	    new Integral(x -> Math.sqrt(Math.max(10000 * Math.PI * Math.PI - x * x, 0)) * Math.sin(x), 0, 100 * Math.PI,
+	    new Integral(x -> x < 0 ? 0 : Math.sqrt(10000 * Math.PI * Math.PI - x * x) * Math.sin(x), 0, 100 * Math.PI,
 		    298.43571649436), //
 	    new Integral(x -> Math.exp(-Math.sqrt(Math.max(x, 0))) * Math.sin(x), 0, 2 * Math.PI, 0.38749284555451), //
 	    new Integral(x -> Math.cos(32 * Math.sin(x)), 0, Math.PI, 0.4337880026347), //
@@ -295,7 +295,7 @@ public final class TestProblems {
 	    new Integral(x -> Math.pow(Math.max(x, 0), 0.25), 0, 1, 0.8), //
 	    new Integral(x -> Math.pow(Math.max(x, 0), 0.125), 0, 1, 0.88888888888888), //
 	    new Integral(x -> x <= 0 ? 0 : Math.sqrt(x) * Math.log(x), 0, 1, -4. / 9), //
-	    new Integral(x -> Math.sqrt(1 - x * x), 0, 1, Math.PI / 4), //
+	    new Integral(x -> Math.sqrt(1 - x * x), -1, 1, Math.PI / 2), //
 	    new Integral(x -> Math.sqrt(Math.max(x, 0)) * Math.abs(Math.cos(6 * Math.PI * x)), 0, 1, 0.423474113339959), //
 
 	    // spikes
@@ -304,6 +304,9 @@ public final class TestProblems {
 	    new Integral(x -> 1 / (Math.exp(-Math.abs(2 * Math.sin(2 * Math.PI * x))) + 1), -1, 1, 1.5288524565498178), //
 	    new Integral(x -> Math.log(Math.abs((Math.tan(x) + Math.sqrt(7)) / (Math.tan(x) - Math.sqrt(7)))),
 		    Math.PI / 3, Math.PI / 2, 0.8889149278163532), //
+
+	    // plateau and sharp edges or other fine features
+	    new Integral(x -> Math.exp(x) * Math.sin(3 * x) * Math.tanh(5 * Math.cos(30 * x)), -1, 1, -0.017790593076), //
     };
 
     private TestProblems() {

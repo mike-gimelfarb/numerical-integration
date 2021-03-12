@@ -107,7 +107,7 @@ public final class RmsRule extends Quadrature {
     }
 
     @Override
-    double properIntegral(final Function<? super Double, Double> f, final double a, final double b) {
+    final QuadratureResult properIntegral(final Function<? super Double, Double> f, final double a, final double b) {
 	return qxgs(f, a, b, myTol, myRelTol, myMaxEvals);
     }
 
@@ -115,9 +115,9 @@ public final class RmsRule extends Quadrature {
     public final String getName() {
 	return "RMS Rule";
     }
-    
-    private double qxgs(final Function<? super Double, Double> f, final double a, final double b, final double epsabs,
-	    final double epsrel, final int limit) {
+
+    private final QuadratureResult qxgs(final Function<? super Double, Double> f, final double a, final double b,
+	    final double epsabs, final double epsrel, final int limit) {
 
 	// prepare variables
 	final int[] ier = new int[1];
@@ -128,12 +128,7 @@ public final class RmsRule extends Quadrature {
 
 	// call main subroutine
 	qxgs(f, a, b, epsabs, epsrel, result, abserr, ier, limit, last, fev);
-	myFEvals += fev[0];
-	if (ier[0] == 0) {
-	    return result[0];
-	} else {
-	    return Double.NaN;
-	}
+	return new QuadratureResult(result[0], abserr[0], fev[0], ier[0] == 0);
     }
 
     private static void qxgs(final Function<? super Double, Double> f, final double a, final double b,

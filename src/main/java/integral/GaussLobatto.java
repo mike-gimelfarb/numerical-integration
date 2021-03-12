@@ -33,7 +33,7 @@ public final class GaussLobatto extends Quadrature {
     }
 
     @Override
-    final double properIntegral(final Function<? super Double, Double> f, final double a, final double b) {
+    final QuadratureResult properIntegral(final Function<? super Double, Double> f, final double a, final double b) {
 	return dlob8e(f, a, b);
     }
 
@@ -42,7 +42,7 @@ public final class GaussLobatto extends Quadrature {
 	return "Gauss-Lobatto";
     }
 
-    private final double dlob8e(final Function<? super Double, Double> f, final double a, final double b) {
+    private final QuadratureResult dlob8e(final Function<? super Double, Double> f, final double a, final double b) {
 
 	// compute interpolation points
 	final double mid = 0.5 * (a + b);
@@ -92,8 +92,7 @@ public final class GaussLobatto extends Quadrature {
 
 	// call the recursive subroutine
 	final double result = dlob8(f, a, b, y1, y13, s1, rtol);
-	myFEvals += fev;
-	return result;
+	return new QuadratureResult(result, Double.NaN, fev, Double.isFinite(result));
     }
 
     private final double dlob8(final Function<? super Double, Double> f, final double a, final double b,

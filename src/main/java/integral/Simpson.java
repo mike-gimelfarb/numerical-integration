@@ -83,14 +83,14 @@ public final class Simpson extends Quadrature {
     }
 
     @Override
-    final double properIntegral(final Function<? super Double, Double> f, final double a, final double b) {
+    final QuadratureResult properIntegral(final Function<? super Double, Double> f, final double a, final double b) {
 	switch (myMethod) {
 	case GLOBAL:
 	    return globalSimpson(f, a, b);
 	case LOCAL:
 	    return localSimpson(f, a, b);
 	default:
-	    return Double.NaN;
+	    return new QuadratureResult(Double.NaN, Double.NaN, 0, false);
 	}
     }
 
@@ -99,27 +99,36 @@ public final class Simpson extends Quadrature {
 	return myMethod.toString() + "-Simpson";
     }
 
-    private final double globalSimpson(final Function<? super Double, Double> func, final double a, final double b) {
+    private static final double[] simpson13(final Function<? super Double, Double> func, final double a,
+	    final double mid, final double b, final double fa, final double fmid, final double fb) {
+	final double lmid = 0.5 * (a + mid);
+	final double rmid = 0.5 * (mid + b);
+	final double flmid = func.apply(lmid);
+	final double frmid = func.apply(rmid);
+	final double h = b - a;
+	final double crude = (h / 6) * (fa + 4 * fmid + fb);
+	final double fine = (h / 12) * (fa + 4 * flmid + 2 * fmid + 4 * frmid + fb);
+	final double est = fine;
+	final double error = Math.abs(fine - crude) / 15;
+	final double[] result = { a, lmid, mid, rmid, b, fa, flmid, fmid, frmid, fb, est, error };
+	return result;
+    }
+
+    private final QuadratureResult globalSimpson(final Function<? super Double, Double> func, final double a,
+	    final double b) {
 
 	// estimate the error on [a, b] using Lyness'-Richardson
 	final double m0 = 0.5 * (a + b);
 	final double fa0 = func.apply(a);
 	final double fm0 = func.apply(m0);
 	final double fb0 = func.apply(b);
-	final double lm0 = 0.5 * (a + m0);
-	final double rm0 = 0.5 * (m0 + b);
-	final double flm0 = func.apply(lm0);
-	final double frm0 = func.apply(rm0);
-	final double h0 = b - a;
-	final double crude0 = (h0 / 6) * (fa0 + 4 * fm0 + fb0);
-	final double fine0 = (h0 / 12) * (fa0 + 4 * flm0 + 2 * fm0 + 4 * frm0 + fb0);
-	double est = fine0;
-	double error = Math.abs(fine0 - crude0) / 15;
+	double[] interval = simpson13(func, a, m0, b, fa0, fm0, fb0);
+	double est = interval[10];
+	double error = interval[11];
 	int fev = 5;
 
 	// make the stack, and push the interval onto it
 	final AbstractQueue<double[]> queue = new PriorityQueue<>(100, new IntervalErrorComparator());
-	double[] interval = { a, lm0, m0, rm0, b, fa0, flm0, fm0, frm0, fb0, fine0, error };
 	queue.add(interval);
 
 	// unrolled version of the adaptive Simpson method
@@ -146,44 +155,25 @@ public final class Simpson extends Quadrature {
 	    }
 
 	    // estimate the error on [a, mid] using Lyness'-Richardson
-	    final double llm1 = 0.5 * (a1 + lm1);
-	    final double lrm1 = 0.5 * (lm1 + m1);
-	    final double fllm1 = func.apply(llm1);
-	    final double flrm1 = func.apply(lrm1);
-	    final double lh = m1 - a1;
-	    final double lcrude = (lh / 6) * (fa1 + 4 * flm1 + fm1);
-	    final double lfine = (lh / 12) * (fa1 + 4 * fllm1 + 2 * flm1 + 4 * flrm1 + fm1);
-	    final double lest = lfine;
-	    final double lerror = Math.abs(lfine - lcrude) / 15;
+	    final double[] linterval = simpson13(func, a1, lm1, m1, fa1, flm1, fm1);
+	    final double lest = linterval[10];
+	    final double lerror = linterval[11];
+	    queue.add(linterval);
 
 	    // estimate the error on [mid, b] using Lyness'-Richardson
-	    final double rlm1 = 0.5 * (m1 + rm1);
-	    final double rrm1 = 0.5 * (rm1 + b1);
-	    final double frlm1 = func.apply(rlm1);
-	    final double frrm1 = func.apply(rrm1);
-	    final double rh = b1 - m1;
-	    final double rcrude = (rh / 6) * (fm1 + 4 * frm1 + fb1);
-	    final double rfine = (rh / 12) * (fm1 + 4 * frlm1 + 2 * frm1 + 4 * frrm1 + fb1);
-	    final double rest = rfine;
-	    final double rerror = Math.abs(rfine - rcrude) / 15;
+	    final double[] rinterval = simpson13(func, m1, rm1, b1, fm1, frm1, fb1);
+	    final double rest = rinterval[10];
+	    final double rerror = rinterval[11];
+	    queue.add(rinterval);
 
 	    // update global estimate of the integral and error
 	    est = est - area1 + lest + rest;
 	    error = error - error1 + lerror + rerror;
 	    fev += 4;
 
-	    // add the left interval to the queue
-	    final double[] linterval = { a1, llm1, lm1, lrm1, m1, fa1, fllm1, flm1, flrm1, fm1, lest, lerror };
-	    queue.add(linterval);
-
-	    // add the right interval to the queue
-	    final double[] rinterval = { m1, rlm1, rm1, rrm1, b1, fm1, frlm1, frm1, frrm1, fb1, rest, rerror };
-	    queue.add(rinterval);
-
 	    // check for budget reached or invalid value
 	    if (fev >= myMaxEvals || !Double.isFinite(est)) {
-		myFEvals += fev;
-		return Double.NaN;
+		return new QuadratureResult(est, error, fev, false);
 	    }
 
 	    // check for tolerance level reached
@@ -193,11 +183,11 @@ public final class Simpson extends Quadrature {
 	}
 
 	// reached the final requested tolerance
-	myFEvals += fev;
-	return est;
+	return new QuadratureResult(est, error, fev, true);
     }
 
-    private final double localSimpson(final Function<? super Double, Double> func, final double a, final double b) {
+    private final QuadratureResult localSimpson(final Function<? super Double, Double> func, final double a,
+	    final double b) {
 
 	// initialize the first interval
 	final double m0 = 0.5 * (a + b);
@@ -246,8 +236,7 @@ public final class Simpson extends Quadrature {
 
 	    // check for budget reached or invalid value
 	    if (fev >= myMaxEvals || !Double.isFinite(est)) {
-		myFEvals += fev;
-		return Double.NaN;
+		return new QuadratureResult(est, Double.NaN, fev, false);
 	    }
 
 	    // push the subdivided interval onto the stack
@@ -258,7 +247,6 @@ public final class Simpson extends Quadrature {
 	}
 
 	// reached the final requested tolerance on all subdivisions
-	myFEvals += fev;
-	return est;
+	return new QuadratureResult(est, Double.NaN, fev, true);
     }
 }

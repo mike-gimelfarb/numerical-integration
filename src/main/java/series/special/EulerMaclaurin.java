@@ -148,9 +148,7 @@ public final class EulerMaclaurin {
 	    };
 
 	    // apply numerical integration to this new function
-	    myQuad.resetCounter();
-	    double integrand = myQuad.integrate(f01, 0.0, 1.0);
-	    myFEvals += myQuad.getEvaluations();
+	    double integrand = myQuad.integrate(f01, 0.0, 1.0).estimate;
 	    if (Double.isNaN(integrand)) {
 		myErrorCodes.add(EulerMaclaurinErrorCode.PIECEWISE_INTEGRATION_FAILED);
 	    }
@@ -159,7 +157,7 @@ public final class EulerMaclaurin {
 	};
 
 	// accelerate the series of definite integrals
-	final double result = myAccelerator.limit(Sequences.toIterable(seq, 1L), true);
+	final double result = myAccelerator.limit(Sequences.toIterable(seq, 1L), true).limit;
 	if (Double.isNaN(result)) {
 	    myErrorCodes.add(EulerMaclaurinErrorCode.SERIES_ACCELERATION_FAILED);
 	}

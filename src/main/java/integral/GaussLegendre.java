@@ -27,7 +27,7 @@ public final class GaussLegendre extends Quadrature {
     }
 
     @Override
-    final double properIntegral(final Function<? super Double, Double> f, final double a, final double b) {
+    final QuadratureResult properIntegral(final Function<? super Double, Double> f, final double a, final double b) {
 
 	// prepare variables
 	final double[] err = { myTol };
@@ -37,8 +37,7 @@ public final class GaussLegendre extends Quadrature {
 
 	// call main subroutine
 	dgaus8(f, a, b, err, ans, ierr, fev);
-	myFEvals += fev[0];
-	return ierr[0] == 1 || ierr[0] == -1 ? ans[0] : Double.NaN;
+	return new QuadratureResult(ans[0], err[0], fev[0], ierr[0] == 1 || ierr[0] == -1);
     }
 
     @Override
@@ -48,7 +47,6 @@ public final class GaussLegendre extends Quadrature {
 
     private void dgaus8(final Function<? super Double, Double> fun, final double a, final double b, final double[] err,
 	    final double[] ans, final int[] ierr, final int[] fev) {
-
 	int k, kml = 6, kmx = 5000, l, lmx, mxl, nbits, nib, nlmx;
 	double ae, anib, area, c, ce, ee, ef, eps, est, gl, glr, tol, vr;
 	final int[] lr = new int[61];
@@ -112,13 +110,15 @@ public final class GaussLegendre extends Quadrature {
 
 	    // Compute refined estimates, estimate the error, etc.
 	    if (fev[0] - 8 >= myMaxEvals) {
-		ans[0] = Double.NaN;
+		// ans[0] = Double.NaN;
+		ierr[0] = 2;
 		return;
 	    }
 	    gl = g8(fun, aa[l - 1] + hh[l - 1], hh[l - 1]);
 	    fev[0] += 8;
 	    if (fev[0] - 8 >= myMaxEvals) {
-		ans[0] = Double.NaN;
+		// ans[0] = Double.NaN;
+		ierr[0] = 2;
 		return;
 	    }
 	    gr[l - 1] = g8(fun, aa[l - 1] + 3.0 * hh[l - 1], hh[l - 1]);

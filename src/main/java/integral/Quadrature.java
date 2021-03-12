@@ -8,10 +8,32 @@ import java.util.function.Function;
  */
 public abstract class Quadrature {
 
+    /**
+     * 
+     */
+    public static final class QuadratureResult {
+
+	public final double estimate;
+	public final double error;
+	public final int evaluations;
+	public final boolean converged;
+
+	public QuadratureResult(final double est, final double err, final int evals, final boolean success) {
+	    estimate = est;
+	    error = err;
+	    evaluations = evals;
+	    converged = success;
+	}
+
+	@Override
+	public String toString() {
+	    return String.format("%.08f", estimate) + " +- " + String.format("%.08f", error) + "\n" + "evaluations: "
+		    + evaluations + "\n" + "converged: " + converged;
+	}
+    }
+
     protected final double myTol;
     protected final int myMaxEvals;
-
-    protected int myFEvals;
 
     /**
      * Creates a new instance of the current numerical integrator.
@@ -25,10 +47,9 @@ public abstract class Quadrature {
     public Quadrature(final double tolerance, final int maxEvaluations) {
 	myTol = tolerance;
 	myMaxEvals = maxEvaluations;
-	myFEvals = 0;
     }
 
-    abstract double properIntegral(Function<? super Double, Double> f, double a, double b);
+    abstract QuadratureResult properIntegral(Function<? super Double, Double> f, double a, double b);
 
     /**
      * Returns a string representation of the current algorithm.
@@ -36,34 +57,6 @@ public abstract class Quadrature {
      * @return a string representation of the current algorithm
      */
     public abstract String getName();
-
-    /**
-     * Sets the variable that keeps track of the number of function evaluations to
-     * zero.
-     */
-    public final void resetCounter() {
-	myFEvals = 0;
-    }
-
-    /**
-     * Returns the number of evaluations of the function made thus far.
-     * 
-     * @return an integer representing the number of evaluations of the function
-     *         made thus far.
-     */
-    public final int getEvaluations() {
-	return myFEvals;
-    }
-
-    /**
-     * Returns the tolerance of this instance.
-     * 
-     * @return the smallest acceptable change in integral estimates in consecutive
-     *         iterations that indicates the algorithm has converged
-     */
-    public final double getTolerance() {
-	return myTol;
-    }
 
     /**
      * Estimates a definite integral, or indefinite integral in some limited cases.
@@ -75,11 +68,11 @@ public abstract class Quadrature {
      * @param b the right endpoint of the integration interval
      * @return an estimate of the definite or indefinite integral
      */
-    public double integrate(final Function<? super Double, Double> f, final double a, final double b) {
+    public QuadratureResult integrate(final Function<? super Double, Double> f, final double a, final double b) {
 
 	// empty integral (a, a)
 	if (a == b) {
-	    return 0.0;
+	    return new QuadratureResult(0.0, 0.0, 0, true);
 	}
 
 	// opposite bounds
@@ -110,8 +103,9 @@ public abstract class Quadrature {
      * @param b  the right endpoint of the integration interval
      * @return an estimate of the definite integral
      */
-    public double integrate(final Function<? super Double, Double> f, final Function<? super Double, Double> t,
-	    final Function<? super Double, Double> dt, final double a, final double b) {
+    public QuadratureResult integrate(final Function<? super Double, Double> f,
+	    final Function<? super Double, Double> t, final Function<? super Double, Double> dt, final double a,
+	    final double b) {
 
 	// construct the integrand f(t(x)) t(x) dt(x)
 	final Function<Double, Double> func = (x) -> f.apply(t.apply(x)) * dt.apply(x);
@@ -157,7 +151,7 @@ public abstract class Quadrature {
 	    public final Double next() {
 		left = right;
 		right = it.next();
-		return integrate(f, left, right);
+		return integrate(f, left, right).estimate;
 	    }
 	};
     }

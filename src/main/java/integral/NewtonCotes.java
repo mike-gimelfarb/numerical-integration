@@ -22,7 +22,7 @@ public final class NewtonCotes extends Quadrature {
     }
 
     @Override
-    final double properIntegral(final Function<? super Double, Double> f, final double a, final double b) {
+    final QuadratureResult properIntegral(final Function<? super Double, Double> f, final double a, final double b) {
 	return dqnc79(f, a, b);
     }
 
@@ -30,8 +30,8 @@ public final class NewtonCotes extends Quadrature {
     public final String getName() {
 	return "Newton-Cotes";
     }
-    
-    private double dqnc79(final Function<? super Double, Double> fun, final double a, final double b) {
+
+    private final QuadratureResult dqnc79(final Function<? super Double, Double> fun, final double a, final double b) {
 	double ae, area, bank, blocal, c, ce, ee, ef, eps, q13, q7, q7l, sq2 = Constants.SQRT2, test, tol, vr, ans;
 	int i, kml = 7, kmx = 5000, l, lmn, lmx, nbits, nib, nlmn = 2, nlmx, fev = 0, k = 0;
 	final double[] aa = new double[100], f = new double[14], f1 = new double[100], f2 = new double[100],
@@ -44,7 +44,7 @@ public final class NewtonCotes extends Quadrature {
 	ce = 0.0;
 	ans = 0.0;
 	if (a == b) {
-	    return ans;
+	    return new QuadratureResult(ans, ce, fev, true);
 	}
 	lmx = nlmx;
 	lmn = nlmn;
@@ -52,14 +52,12 @@ public final class NewtonCotes extends Quadrature {
 	    c = Math.abs(1.0 - a / b);
 	    if (c <= 0.1) {
 		if (c <= 0.0) {
-		    myFEvals += fev;
-		    return ans;
+		    return new QuadratureResult(ans, ce, fev, true);
 		}
 		nib = (int) (0.5 - Math.log(c) * Constants.LOG2_INV);
 		lmx = Math.min(nlmx, nbits - nib - 4);
 		if (lmx < 2) {
-		    myFEvals += fev;
-		    return ans;
+		    return new QuadratureResult(ans, ce, fev, true);
 		}
 		lmn = Math.min(lmn, lmx);
 	    }
@@ -93,8 +91,7 @@ public final class NewtonCotes extends Quadrature {
 		f[i - 1] = fun.apply(aa[l - 1] + (i - 1) * hh[l - 1]);
 		++fev;
 		if (fev >= myMaxEvals) {
-		    myFEvals += fev;
-		    return Double.NaN;
+		    return new QuadratureResult(ans, ce, fev, false);
 		}
 	    }
 	    k += 6;
@@ -219,11 +216,10 @@ public final class NewtonCotes extends Quadrature {
 		while (true) {
 		    if (l <= 1) {
 			ans = vr;
-			myFEvals += fev;
 			if (Math.abs(ce) > 2.0 * tol * area) {
-			    return Double.NaN;
+			    return new QuadratureResult(ans, Math.abs(ce), fev, false);
 			} else {
-			    return ans;
+			    return new QuadratureResult(ans, Math.abs(ce), fev, true);
 			}
 		    }
 		    if (l <= 17) {
