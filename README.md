@@ -92,12 +92,12 @@ The following integral is improper and hard to evaluate directly:
 
 <a href="https://www.codecogs.com/eqnedit.php?latex=\int_{-\infty}^{-1}\frac{e^x}{x}\,\mathrm{d}x" target="_blank"><img src="https://latex.codecogs.com/gif.latex?\int_{-\infty}^{-1}\frac{e^x}{x}\,\mathrm{d}x" title="\int_{-\infty}^{-1}\frac{e^x}{x}\,\mathrm{d}x" /></a>
 
-
 However, the package provides a transformation of variables to deal with integrals of this form:
 
 <a href="https://www.codecogs.com/eqnedit.php?latex=[a,\infty]&space;:&space;t&space;\in&space;[0,1]&space;\to&space;(a&space;-&space;1)&space;&plus;&space;\frac{1}{t}" target="_blank"><img src="https://latex.codecogs.com/gif.latex?[a,\infty]&space;:&space;t&space;\in&space;[0,1]&space;\to&space;(a&space;-&space;1)&space;&plus;&space;\frac{1}{t}" title="[a,\infty] : t \in [0,1] \to (a - 1) + \frac{1}{t}" /></a>
 <p></p>
 <a href="https://www.codecogs.com/eqnedit.php?latex=[-\infty,b]&space;:&space;t&space;\in&space;[0,1]&space;\to&space;(b&space;&plus;&space;1)&space;-&space;\frac{1}{t}" target="_blank"><img src="https://latex.codecogs.com/gif.latex?[-\infty,b]&space;:&space;t&space;\in&space;[0,1]&space;\to&space;(b&space;&plus;&space;1)&space;-&space;\frac{1}{t}" title="[-\infty,b] : t \in [0,1] \to (b + 1) - \frac{1}{t}" /></a>
+
 Integrals over [-infinity, infinity] are broken into two intervals at zero.
 
 ```java
