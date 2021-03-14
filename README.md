@@ -49,7 +49,7 @@ Applying the Ensemble algorithm directly will return 2.06035757 which is not the
 Function<Long,Double> f = k -> 1.0 / k / Math.pow(Math.log(k), 2);
 	
 // create transform of original series
-Function<Long, Double> f2 = (new Ensemble(1e-8, 1000, 5)).toAlternatingSeries(f, 2);
+Function<Long, Double> f2 = (new Ensemble(1e-8, 100, 2)).toAlternatingSeries(f, 2);
 Iterable<Double> iter = Sequences.toIterable(f2, 1);
 	
 // find limit of transformed series
@@ -57,7 +57,25 @@ SeriesAlgorithm alg = new Ensemble(1e-8, 1000, 5);
 System.out.println(alg.limit(iter, true));
 ```
 
-Now, the estimate of the limit is 2.10972103.
+Now, the estimate of the limit is 2.10973574, which is correct to 5 decimal places.
+
+However, for terms that are sufficiently smooth and have an analytic continuation to the real numbers, it is possible to use the Euler-Maclaurin method to approximate the series by an imporoper integral, which often provides a more precise result. To run this, a method for evaluating integrals must be defined, how to break the improper integral up into proper integrals, and how to accelerate the resulting sequence of integral estimates.
+
+```java
+import series.special.EulerMaclaurin;
+
+// define the series terms
+Function<Double, Double> f = k -> 1.0 / k / Math.pow(Math.log(k), 2);
+	
+// find limit of transformed series
+Function<Long, Double> bins = k -> Math.pow(2, k);
+Quadrature integrator = new GaussKronrod(1e-8, 1000);
+SeriesAlgorithm accelerator = new Ensemble(1e-8, 1000, 5);
+EulerMaclaurin algorithm = new EulerMaclaurin(1e-8, integrator, accelerator, bins);
+System.out.println(algorithm.limit(f, 2L));
+```
+
+This time, the estimate of the limit is 2.10974280 and is correct to 8 decimals.
 
 ## Definite Integrals -- Simple Example
 The framework is also very capable of numerically evaluating integrals of 1d functions, including adaptive Clenshaw-Curtis, adaptive Gaussian (Gauss-Kronrod, Gauss-Legendre, Gauss-Lobatto, RMS improvement of Gauss-Kronrod), Newton-Cotes, Romberg, adaptive Simpson (global and local versions), and Tanh-Sinh quadrature schemes.
