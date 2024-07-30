@@ -123,7 +123,7 @@ The estimated value of the integral is -0.21938393, correct to 8 decimals.
 
 The following integral is improper, and is also highly oscillatory:
 
-$$\int_{0}^{\infty}\cos(x^2) \mathrm{d}x""
+$$\int_{0}^{\infty}\cos(x^2) \mathrm{d}x$$
 
 It is impossible to evaluate using any single integrator. However, it is possible to break up this integral over integration regions separated by the roots of the function, and estimate the above integral by evaluating an infinite series. The package provides a convenience method to do this, but requires the roots of the integrand to be fed to the method. The following example illustrates this:
 
