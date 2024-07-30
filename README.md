@@ -22,7 +22,7 @@ The framework currently supports many algorithms for accelerating convergence of
 
 Consider the following infinite series:
 
-<a href="https://www.codecogs.com/eqnedit.php?latex=\sum_{k=1}^{\infty}{\frac{1}{k^2}}" target="_blank"><img src="https://latex.codecogs.com/gif.latex?\sum_{k=1}^{\infty}{\frac{1}{k^2}}" title="\sum_{k=1}^{\infty}{\frac{1}{k^2}}" /></a>
+$$\sum_{k=1}^{\infty}{\frac{1}{k^2}}$$
 
 The Ensemble algorithm is the best bet if additional information about the series is not provided:
 
@@ -40,7 +40,7 @@ The estimate of the limit is 1.64493406, the exact value is 1.64493406 (to 8 dec
 ## Limits and Series -- Complex Example
 Sometimes existing methods fail if the series is very slowly converging. Consider the following very difficult series:
 
-<a href="https://www.codecogs.com/eqnedit.php?latex=\sum_{k=2}^{\infty}{\frac{1}{k&space;(\log{k})^2}}" target="_blank"><img src="https://latex.codecogs.com/gif.latex?\sum_{k=2}^{\infty}{\frac{1}{k&space;(\log{k})^2}}" title="\sum_{k=2}^{\infty}{\frac{1}{k (\log{k})^2}}" /></a>
+$$\sum_{k=2}^{\infty}{\frac{1}{k (\log{k})^2}}$$
 
 Applying the Ensemble algorithm directly will return 2.06035757 which is not the correct limit. However, using a trick of van Wijngaarden, we can convert the series to an alternating series with the same limit:
 
@@ -79,7 +79,7 @@ The framework is also very capable of numerically evaluating integrals of 1d fun
 
 Consider the following definite integral:
 
-<a href="https://www.codecogs.com/eqnedit.php?latex=\int_{-100}^{100}\frac{1}{1&plus;x^2}\,\mathrm{d}x" target="_blank"><img src="https://latex.codecogs.com/gif.latex?\int_{-100}^{100}\frac{1}{1&plus;x^2}\,\mathrm{d}x" title="\int_{-100}^{100}\frac{1}{1+x^2}\,\mathrm{d}x" /></a>
+$$\int_{-100}^{100}\frac{1}{1&plus;x^2} \mathrm{d}x$$
 
 We will use Gaussian quadrature (Gauss-Kronrod) to evaluate this integral:
 
@@ -98,11 +98,11 @@ The predicted value is 3.12159332, which is correct to 8 decimal places.
 
 The following integral is improper and hard to evaluate directly:
 
-<a href="https://www.codecogs.com/eqnedit.php?latex=\int_{-\infty}^{-1}\frac{e^x}{x}\,\mathrm{d}x" target="_blank"><img src="https://latex.codecogs.com/gif.latex?\int_{-\infty}^{-1}\frac{e^x}{x}\,\mathrm{d}x" title="\int_{-\infty}^{-1}\frac{e^x}{x}\,\mathrm{d}x" /></a>
+$$\int_{-\infty}^{-1}\frac{e^x}{x} \mathrm{d}x$$
 
 However, the package provides a transformation of variables to deal with integrals of this form:
 
-<a href="https://www.codecogs.com/eqnedit.php?latex=[a,\infty]&space;:&space;t&space;\in&space;[0,1]&space;\to&space;(a&space;-&space;1)&space;&plus;&space;\frac{1}{t}" target="_blank"><img src="https://latex.codecogs.com/gif.latex?[a,\infty]&space;:&space;t&space;\in&space;[0,1]&space;\to&space;(a&space;-&space;1)&space;&plus;&space;\frac{1}{t}" title="[a,\infty] : t \in [0,1] \to (a - 1) + \frac{1}{t}" /></a>
+$$[a,\infty]&space;:&space;t&space;\in&space;[0,1]&space;\to&space;(a&space;-&space;1)&space;&plus;&space;\frac{1}{t}" target="_blank"><img src="https://latex.codecogs.com/gif.latex?[a,\infty]&space;:&space;t&space;\in&space;[0,1]&space;\to&space;(a&space;-&space;1)&space;&plus;&space;\frac{1}{t}" title="[a,\infty] : t \in [0,1] \to (a - 1) + \frac{1}{t}" /></a>
 <p></p>
 <a href="https://www.codecogs.com/eqnedit.php?latex=[-\infty,b]&space;:&space;t&space;\in&space;[0,1]&space;\to&space;(b&space;&plus;&space;1)&space;-&space;\frac{1}{t}" target="_blank"><img src="https://latex.codecogs.com/gif.latex?[-\infty,b]&space;:&space;t&space;\in&space;[0,1]&space;\to&space;(b&space;&plus;&space;1)&space;-&space;\frac{1}{t}" title="[-\infty,b] : t \in [0,1] \to (b + 1) - \frac{1}{t}" /></a>
 
@@ -123,7 +123,7 @@ The estimated value of the integral is -0.21938393, correct to 8 decimals.
 
 The following integral is improper, and is also highly oscillatory:
 
-<a href="https://www.codecogs.com/eqnedit.php?latex=\int_{0}^{\infty}\cos(x^2)\,\mathrm{d}x" target="_blank"><img src="https://latex.codecogs.com/gif.latex?\int_{0}^{\infty}\cos(x^2)\,\mathrm{d}x" title="\int_{0}^{\infty}\cos(x^2)\,\mathrm{d}x" /></a>
+$$\int_{0}^{\infty}\cos(x^2) \mathrm{d}x""
 
 It is impossible to evaluate using any single integrator. However, it is possible to break up this integral over integration regions separated by the roots of the function, and estimate the above integral by evaluating an infinite series. The package provides a convenience method to do this, but requires the roots of the integrand to be fed to the method. The following example illustrates this:
 
